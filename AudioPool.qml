@@ -5,7 +5,7 @@ Item {
     id: root
     objectName: "physicalAudio"
     property bool enabled: true
-    property real volume: 0.5
+    property real volume: 0.25
     property int variation: 0
     readonly property var clips: ["wall", "paddle", "brick0", "brick1", "brick2", "brick3", "magic0", "magic1", "magic2", "magic3", "tone120", "tone240", "tone360", "tone480", "tone720", "tone960", "tone1440"]
 

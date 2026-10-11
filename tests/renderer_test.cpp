@@ -27,6 +27,18 @@ int main(int argc,char **argv) {
     QPainterPath reversed;
     const auto polygon=star.toFillPolygon(); reversed.moveTo(polygon.last()); for(int i=polygon.size()-2;i>=0;--i)reversed.lineTo(polygon[i]); reversed.closeSubpath(); checkOutline(reversed);
 
+    QPainterPath bolt; bolt.moveTo(10,10); bolt.lineTo(40,20); bolt.lineTo(55,5);
+    QVector<Vertex> glow;
+    appendStroke(glow,bolt,QTransform(),QColor(255,128,64,128),4,0.5,1);
+    require(!glow.isEmpty() && glow.size()%3==0,"glow produced incomplete triangles");
+    bool transparentEdge=false,visibleCore=false;
+    for(const auto &v:glow) {
+        require(v.r<=v.a && v.g<=v.a && v.b<=v.a,"glow colors are not premultiplied");
+        if(v.a==0)transparentEdge=true;
+        if(v.a>0)visibleCore=true;
+    }
+    require(transparentEdge && visibleCore,"glow lost antialiased edges or core");
+
     GameRenderer renderer; renderer.setWidth(80); renderer.setHeight(80);
     const QString packet=R"({"type":"frame","width":80,"height":80,"state":{},"caches":{"1":[["set","fillStyle","#00ff00"],["fillRect",32,32,16,16]]},"ops":[["set","fillStyle","#0000ff"],["fillRect",0,0,80,80],["debris",1,30,40,1,0,"#ff0000",10,true,0,[]],["cache",1],["debris",2,50,40,1,0,"#ff8800",10,true,0,[]]]})";
     renderer.acceptLine(packet);

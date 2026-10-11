@@ -17,6 +17,7 @@
 #include <atomic>
 #include <cmath>
 #include <memory>
+#include "pointerlock.h"
 
 struct Vertex { float x,y; unsigned char r,g,b,a; };
 
@@ -55,6 +56,58 @@ public:
     void setFrame(const QPicture &next,qreal w,qreal h) { picture=next; gw=w; gh=h; update(); }
     void paint(QPainter *painter) override { painter->scale(width()/gw,height()/gh); painter->drawPicture(0,0,picture); }
 };
+
+// Build glow strokes as a single GPU triangle batch. Rasterizing six wide,
+// antialiased QPainter strokes per bolt was the expensive zapper path.
+static void appendStroke(QVector<Vertex> &out,const QPainterPath &path,const QTransform &transform,
+                         QColor color,qreal lineWidth,qreal opacity,qreal fringe) {
+    const qreal radius=lineWidth/2;
+    auto vertex=[&](QPointF point,qreal coverage) {
+        point=transform.map(point);
+        const qreal alpha=qBound(0.,color.alphaF()*opacity*coverage,1.);
+        return Vertex{float(point.x()),float(point.y()),static_cast<unsigned char>(qRound(color.red()*alpha)),
+            static_cast<unsigned char>(qRound(color.green()*alpha)),static_cast<unsigned char>(qRound(color.blue()*alpha)),
+            static_cast<unsigned char>(qRound(255*alpha))};
+    };
+    auto triangle=[&](QPointF a,QPointF b,QPointF c,qreal aa=1,qreal ab=1,qreal ac=1) {
+        out.append(vertex(a,aa)); out.append(vertex(b,ab)); out.append(vertex(c,ac));
+    };
+    for(const auto &points:path.toSubpathPolygons()) {
+        QVector<QPointF> normals;
+        for(int i=0;i<points.size();++i) {
+            auto normal=[](QPointF delta) {
+                const qreal length=std::hypot(delta.x(),delta.y());
+                return length>0.001 ? QPointF(-delta.y()/length,delta.x()/length) : QPointF();
+            };
+            const QPointF before=normal(points[i]-points[qMax(0,i-1)]);
+            const QPointF after=normal(points[qMin(i+1,points.size()-1)]-points[i]);
+            if(i==0)normals.append(after);
+            else if(i==points.size()-1)normals.append(before);
+            else {
+                const QPointF sum=before+after;
+                const qreal length=std::hypot(sum.x(),sum.y());
+                const QPointF direction=length>0.001 ? sum/length : after;
+                const qreal projection=QPointF::dotProduct(direction,after);
+                normals.append(direction/qMax(0.5,projection));
+            }
+        }
+        for(int i=1;i<points.size();++i) {
+            const QPointF a=points[i-1],b=points[i],na=normals[i-1]*radius,nb=normals[i]*radius;
+            const QPointF fa=normals[i-1]*(radius+fringe),fb=normals[i]*(radius+fringe);
+            triangle(a+na,a-na,b+nb); triangle(a-na,b-nb,b+nb);
+            triangle(a+na,b+nb,a+fa,1,1,0); triangle(b+nb,b+fb,a+fa,1,0,0);
+            triangle(a-na,a-fa,b-nb,1,0,1); triangle(b-nb,a-fa,b-fb,1,0,0);
+        }
+        // Caps only at the ends; the joined strip covers the interior vertices.
+        for(const auto &point:{points.first(),points.last()}) for(int i=0;i<12;++i) {
+            const qreal a=i*2*std::acos(-1.)/12,b=(i+1)*2*std::acos(-1.)/12;
+            const QPointF na(std::cos(a),std::sin(a)),nb(std::cos(b),std::sin(b));
+            triangle(point,point+na*radius,point+nb*radius);
+            triangle(point+na*radius,point+na*(radius+fringe),point+nb*radius,1,0,1);
+            triangle(point+nb*radius,point+na*(radius+fringe),point+nb*(radius+fringe),1,0,0);
+        }
+    }
+}
 
 // Ear clipping runs only when an outline changes. Every displayed fragment
 // then needs just transformed colored vertices, and a layer draws in one batch.
@@ -102,7 +155,7 @@ class GameRenderer : public QQuickPaintedItem {
     Q_PROPERTY(int paintedFrames READ paintedFrames NOTIFY paintedFramesChanged)
     Q_PROPERTY(QString renderError READ renderError NOTIFY renderErrorChanged)
     Q_PROPERTY(QString fontFamily READ fontFamily WRITE setFontFamily NOTIFY fontFamilyChanged)
-    struct Scene { QPicture back, bricks, front; qreal width=1800, height=900; quint64 brickRevision=0; bool gpu=false; QVector<Vertex> slow,fast; };
+    struct Scene { QPicture back, bricks, front; qreal width=1800, height=900; quint64 brickRevision=0; bool gpu=false; QVector<Vertex> slow,fast,bolts; };
     struct Style {
         QColor fill=Qt::black, stroke=Qt::black;
         qreal lineWidth=1, opacity=1, shadowBlur=0;
@@ -115,7 +168,7 @@ class GameRenderer : public QQuickPaintedItem {
     };
     struct Outline { QPainterPath path; QVector<QPointF> triangles; QJsonArray points; qreal radius=0, roundness=0; bool circle=false; };
     QHash<quint32,Outline> outlines;
-    DebrisLayer *slowLayer=nullptr,*fastLayer=nullptr;
+    DebrisLayer *slowLayer=nullptr,*fastLayer=nullptr,*boltLayer=nullptr;
     PictureLayer *brickLayer=nullptr,*frontLayer=nullptr;
     quint64 childBrickRevision=0;
     QMutex mutex;
@@ -136,7 +189,7 @@ class GameRenderer : public QQuickPaintedItem {
         }
         return QColor(text);
     }
-    QPicture compile(const QJsonArray &ops,QVector<Vertex> *vertices=nullptr) {
+    QPicture compile(const QJsonArray &ops,QVector<Vertex> *vertices=nullptr,QVector<Vertex> *bolts=nullptr) {
         QPicture picture;
         QPainter painter(&picture);
         painter.setRenderHint(QPainter::Antialiasing);
@@ -164,7 +217,7 @@ class GameRenderer : public QQuickPaintedItem {
                     static const QRegularExpression size("([0-9.]+)px");
                     auto match=size.match(value);
                     style.font.setPixelSize(match.hasMatch() ? qRound(match.captured(1).toDouble()) : 16);
-                    style.font.setBold(value.contains("bold"));
+                    style.font.setBold(value.contains("bold") || value.contains("GameFont"));
                 } else if (key!="shadowBlur" && key!="shadowColor" && key!="shadowOffsetX" && key!="shadowOffsetY") {
                     error="Unsupported drawing property: " + key;
                 }
@@ -228,7 +281,14 @@ class GameRenderer : public QQuickPaintedItem {
                 }
             } else if (name=="fill") painter.fillPath(path,style.fill);
             else if (name=="stroke") {
-                // Preserve the bolt's colored halo with native layered strokes.
+                if(bolts && style.shadowBlur>0 && style.shadow.alpha()>0) {
+                    const qreal fringe=qMax(0.5,gw/qMax(width(),1.));
+                    QColor glow=style.shadow; glow.setAlphaF(glow.alphaF()*0.18);
+                    for(int layer=3;layer>=1;--layer) appendStroke(*bolts,path,painter.transform(),glow,style.lineWidth+style.shadowBlur*layer/1.5,style.opacity,fringe);
+                    appendStroke(*bolts,path,painter.transform(),style.stroke,style.lineWidth,style.opacity,fringe);
+                    continue;
+                }
+                // Software/replay fallback retains the same colored halo.
                 if(style.shadowBlur>0 && style.shadow.alpha()>0) {
                     QColor glow=style.shadow; glow.setAlphaF(glow.alphaF()*0.09);
                     for(int layer=6;layer>=1;--layer) painter.strokePath(path,QPen(glow,style.lineWidth+style.shadowBlur*layer/3.,Qt::SolidLine,Qt::RoundCap,Qt::RoundJoin));
@@ -265,7 +325,8 @@ public:
         // antialiasing once per change, then composite the texture on the GPU.
         brickLayer->setRenderTarget(QQuickPaintedItem::Image);
         fastLayer=new DebrisLayer(this); fastLayer->setZ(3);
-        frontLayer=new PictureLayer(this); frontLayer->setZ(4);
+        boltLayer=new DebrisLayer(this); boltLayer->setZ(4);
+        frontLayer=new PictureLayer(this); frontLayer->setZ(5);
         // Raster text and rounded moving objects with smooth coverage; particle
         // geometry remains in separate GPU batches beneath this texture.
         frontLayer->setRenderTarget(QQuickPaintedItem::Image);
@@ -292,12 +353,13 @@ public:
             next->gpu=window() && window()->rendererInterface()->graphicsApi()==QSGRendererInterface::OpenGL;
             next->back=compile(before,next->gpu ? &next->slow : nullptr);
             next->bricks=caches.value(cache); next->brickRevision=revisions.value(cache);
-            next->front=compile(after,next->gpu ? &next->fast : nullptr);
+            next->front=compile(after,next->gpu ? &next->fast : nullptr,next->gpu ? &next->bolts : nullptr);
         }
-        slowLayer->setVisible(next->gpu); brickLayer->setVisible(next->gpu); fastLayer->setVisible(next->gpu); frontLayer->setVisible(next->gpu);
+        slowLayer->setVisible(next->gpu); brickLayer->setVisible(next->gpu); fastLayer->setVisible(next->gpu); boltLayer->setVisible(next->gpu); frontLayer->setVisible(next->gpu);
         if(next->gpu) {
             slowLayer->setFrame(next->slow,next->width,next->height);
             fastLayer->setFrame(next->fast,next->width,next->height);
+            boltLayer->setFrame(next->bolts,next->width,next->height);
             frontLayer->setFrame(next->front,next->width,next->height);
             if(childBrickRevision!=next->brickRevision) { brickLayer->setFrame(next->bricks,next->width,next->height); childBrickRevision=next->brickRevision; }
         }
@@ -333,7 +395,7 @@ public:
 protected:
     void geometryChange(const QRectF &next,const QRectF &previous) override {
         QQuickPaintedItem::geometryChange(next,previous);
-        for(QQuickItem *item:{static_cast<QQuickItem*>(slowLayer),static_cast<QQuickItem*>(brickLayer),static_cast<QQuickItem*>(fastLayer),static_cast<QQuickItem*>(frontLayer)}) {
+        for(QQuickItem *item:{static_cast<QQuickItem*>(slowLayer),static_cast<QQuickItem*>(brickLayer),static_cast<QQuickItem*>(fastLayer),static_cast<QQuickItem*>(boltLayer),static_cast<QQuickItem*>(frontLayer)}) {
             if(item) { item->setWidth(next.width()); item->setHeight(next.height()); }
         }
     }
@@ -345,6 +407,6 @@ class PhysicalRendererPlugin : public QQmlExtensionPlugin {
     Q_OBJECT
     Q_PLUGIN_METADATA(IID QQmlExtensionInterface_iid)
 public:
-    void registerTypes(const char *uri) override { qmlRegisterType<GameRenderer>(uri,1,0,"GameRenderer"); }
+    void registerTypes(const char *uri) override { qmlRegisterType<GameRenderer>(uri,1,0,"GameRenderer"); qmlRegisterType<PointerLock>(uri,1,0,"PointerLock"); }
 };
 #include "renderer.moc"

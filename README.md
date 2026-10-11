@@ -6,14 +6,16 @@ webview, WebAssembly, or web server is needed at runtime.
 
 The controls follow Omarchy's active colors, fonts, spacing, and window rounding.
 The playfield, effects, replay, and SVG exports retain Physical's original
-per-level palettes. The volume slider starts at 50% of the previous port's
-output level and saves your preference between sessions.
+per-level palettes and game font. Pause, fullscreen, and menu buttons sit above
+the playfield; settings and keyboard help live in the menu. Audio defaults to 25%
+and saves your preference between sessions. The initial window is limited to 90%
+of the display width and height.
 
 ## Install
 
 Requires current Omarchy with its Quickshell plugin API and Qt 6.9+ for accelerated OpenGL drawing.
 On Omarchy/Arch, `./install` offers to install any missing build and audio packages
-(`gcc`, `go`, `pkgconf`, `qt6-base`, `qt6-declarative`, and `qt6-multimedia`)
+(`gcc`, `go`, `pkgconf`, `qt6-base`, `qt6-declarative`, `qt6-multimedia`, `qt6-wayland`, `wayland`, and `wayland-protocols`)
 before building. The build has no external Go dependencies.
 
 ```bash
@@ -41,8 +43,10 @@ an explicit resume. A shell restart resets the live game and RAM replay.
 | Input | Action |
 | --- | --- |
 | Mouse / arrows / A D | Move paddle |
+| Right click | Capture/release mouse on Wayland |
+| Space + F / fullscreen button | Toggle fullscreen |
 | Space / Enter / click | Start, retry after game over, or advance after a clear |
-| Space / Escape | Pause; Escape leaves replay first |
+| Space / Escape | Pause; Escape first releases mouse or exits fullscreen |
 | Page Up / Page Down | Navigate unlocked levels |
 | O | Automatic paddle; marks the run assisted |
 | R / S | Toggle debris / sound |
@@ -52,7 +56,7 @@ an explicit resume. A shell restart resets the live game and RAM replay.
 | J / K / L | Reverse / pause / forward replay |
 | Arrows / Home / End in replay | Scrub |
 | V / B | Export SVG / SVG motion trails |
-| ? / Q | Help / close plugin |
+| ? / Q | Controls in menu / close plugin |
 
 The physics lab exposes the original engine's physics, debris, and auto-paddle
 sliders. Copy settings exports the original configuration text to the clipboard.
@@ -72,7 +76,10 @@ SVG exports go to `~/Pictures/Physical/`. Replay stays in RAM.
   other native QPainter commands, caches the static
   brick layer, and paints through an OpenGL framebuffer on the normal Omarchy
   renderer. The software backend remains available for headless checks. Debris
-  keeps its original behind/in-front ordering; the zapper halo uses layered strokes.
+  keeps its original behind/in-front ordering; zapper glow strokes also use GPU
+  triangles instead of expensive raster glow strokes.
+- `native/pointerlock.cpp`: compositor pointer constraints and relative mouse input
+  on the existing Qt Wayland connection, released on focus loss, resize, or menu.
 - `engine/`: the existing Go physics, level parser, powerups, replay, and SVG
   exporter adapted to native execution. `internal/qtbridge` records the original
   renderer's drawing commands and supplies local persistence and level access;
@@ -86,9 +93,10 @@ engine runs separately so a Go panic does not take down the shell process.
 Audio uses a pool of Qt SoundEffects. It preserves brick/magic samples and basic
 synthesized cues, but does not reproduce the web version's exact randomized
 pitch/filter, stereo positioning, or room-reverb graph. Mobile/browser-specific
-features (touch-mode selector, device tilt, pointer lock, browser fullscreen,
+features (touch-mode selector, device tilt,
 and the browser Gamepad API) are not part of this desktop port. Standard Omarchy
-window controls handle moving, resizing, and fullscreen.
+window controls handle moving and resizing. Fullscreen is available in the game;
+right click captures the mouse through Wayland, and Escape releases it.
 
 ## Validation
 

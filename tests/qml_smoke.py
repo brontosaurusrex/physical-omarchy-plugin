@@ -40,7 +40,23 @@ ShellRoot {
             if (!game.engineReady || game.paintedFrames < 2) return;
             if (root.capturing) return;
             if (root.phase === 0) {
-                capture("physical-ready"); root.phase = 10;
+                if (game.windowView.width > game.defaultWindowWidth + 2 || game.windowView.height > game.defaultWindowHeight + 2) { console.error("SMOKE oversized initial window"); Qt.exit(1); return; }
+                capture("physical-ready"); root.phase = 20;
+            } else if (root.phase === 20) {
+                game.pressKey({key: Qt.Key_Space, isAutoRepeat: false});
+                game.pressKey({key: Qt.Key_F, isAutoRepeat: false});
+                game.releaseKey({key: Qt.Key_Space, isAutoRepeat: false});
+                if (!game.fullscreen) { console.error("SMOKE fullscreen chord failed"); Qt.exit(1); return; }
+                root.startTime = Date.now(); root.phase = 21;
+            } else if (root.phase === 21 && Date.now() - root.startTime > 300) {
+                if (Quickshell.env("PHYSICAL_TEST_WAYLAND") && game.windowView.width < game.windowView.screen.width - 2) { console.error("SMOKE fullscreen geometry failed"); Qt.exit(1); return; }
+                game.pressKey({key: Qt.Key_Escape, isAutoRepeat: false});
+                if (game.fullscreen) { console.error("SMOKE fullscreen Escape failed"); Qt.exit(1); return; }
+                root.startTime = Date.now(); root.phase = 22;
+            } else if (root.phase === 22 && Date.now() - root.startTime > 300) {
+                if (game.windowView.width > game.defaultWindowWidth + 2 || game.windowView.height > game.defaultWindowHeight + 2) { console.error("SMOKE fullscreen restore size failed"); Qt.exit(1); return; }
+                if (!Quickshell.env("PHYSICAL_TEST_WAYLAND") && game.mouseCapture.lock()) { console.error("SMOKE offscreen mouse lock succeeded"); Qt.exit(1); return; }
+                game.mouseCapture.release(); root.phase = 10;
             } else if (root.phase === 10) {
                 game.shortcut(" "); game.shortcut("o"); root.phase = 1; root.initialFrames = game.paintedFrames; root.startTime = Date.now();
             } else if (root.phase === 1 && Date.now() - root.startTime > 3000) {
@@ -51,12 +67,13 @@ ShellRoot {
                     audio.play([{kind:"wall"}, {kind:"paddle"}]);
                     if (!(wall.playing || findItem(game, "sound-wall-1").playing) || !(paddle.playing || findItem(game, "sound-paddle-1").playing)) { console.error("SMOKE contact clips not playing"); Qt.exit(1); }
                 }
+                game.toggleMenu();
                 var volume = findItem(game.contentView, "audio-volume");
-                if (!volume || volume.width < 50 || volume.height < 12 || volume.value !== 0.5) { console.error("SMOKE unusable volume slider"); Qt.exit(1); }
-                volume.value = 0.25; volume.moved();
-                capture("physical-dark"); root.phase = 11;
-            } else if (root.phase === 11 && game.state.volume === 0.25) {
-                game.shortcut("k"); root.phase = 2;
+                if (!volume || volume.width < 50 || volume.height < 12 || volume.value !== 0.25) { console.error("SMOKE unusable volume slider"); Qt.exit(1); }
+                volume.value = 0.37; volume.moved();
+                capture("physical-menu"); root.phase = 11;
+            } else if (root.phase === 11 && game.state.volume === 0.37) {
+                game.closeMenu(); game.shortcut("k"); root.phase = 2;
             } else if (root.phase === 2 && game.state.replay) {
                 game.shortcut("Escape"); game.shortcut("e"); root.phase = 3;
             } else if (root.phase === 3 && game.state.editor) {
@@ -101,7 +118,12 @@ with tempfile.TemporaryDirectory(prefix="physical-qml-test-") as directory:
     else:
         env.pop("WAYLAND_DISPLAY", None)
     env.pop("HYPRLAND_INSTANCE_SIGNATURE", None)
-    run = subprocess.run(["quickshell", "--no-color", "-p", str(folder / "shell.qml")], env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=25)
+    try:
+        run = subprocess.run(["quickshell", "--no-color", "-p", str(folder / "shell.qml")], env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=25)
+    except subprocess.TimeoutExpired as error:
+        print((error.stdout or b"" ).decode(errors="replace"))
+        raise
+    if os.environ.get("PHYSICAL_TEST_DEBUG"): print(run.stdout)
     bad = [line for line in run.stdout.splitlines() if "WARN scene:" in line or "ERROR" in line or "QSoundEffect: Error decoding" in line]
     if run.returncode or "SMOKE PASS:" not in run.stdout or bad:
         print(run.stdout)

@@ -21,11 +21,11 @@ with tempfile.TemporaryDirectory(prefix="physical-native-test-") as directory:
     first = read()
     assert first["state"]["levels"] == 33
     assert first["state"]["ready"] and first["caches"]
-    assert first["state"]["volume"] == 0.5
-    assert send("volume", value=0.25)["state"]["volume"] == 0.25
+    assert first["state"]["volume"] == 0.25
+    assert send("volume", value=0.37)["state"]["volume"] == 0.37
     assert send("volume", value=2)["state"]["volume"] == 1
     assert send("volume", value=-1)["state"]["volume"] == 0
-    send("volume", value=0.25)
+    send("volume", value=0.37)
     original_background = first["ops"][0][2]
     colored = send("theme", theme=dict(background="#eeeeee", accent="#2266aa"))
     assert colored["ops"][0][2] == original_background, "Shell theme replaced game palette"
@@ -71,7 +71,7 @@ with tempfile.TemporaryDirectory(prefix="physical-native-test-") as directory:
     process.wait(timeout=5)
     assert process.returncode == 0
     persisted = subprocess.Popen([str(project / "bin/physical-engine")], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=environment)
-    assert json.loads(persisted.stdout.readline())["state"]["volume"] == 0.25
+    assert json.loads(persisted.stdout.readline())["state"]["volume"] == 0.37
     persisted.communicate('{"action":"quit"}\n', timeout=5)
     assert persisted.returncode == 0
     log = process.stderr.read()

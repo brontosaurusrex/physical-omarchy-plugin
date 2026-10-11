@@ -21,7 +21,7 @@ ShellRoot {
     Component.onCompleted: game.open("{}")
     Timer { interval: 1000; running: true; repeat: true; onTriggered: {
         if (!game.engineReady) return;
-        if (!root.started) { game.shortcut(" "); game.shortcut("o"); root.started = true; return; }
+        if (!root.started) { game.shortcut(" "); game.shortcut("o"); root.started = true; root.frames = game.paintedFrames; return; }
         root.totalFrames += game.paintedFrames - root.frames;
         root.minimumFrames = Math.min(root.minimumFrames,game.paintedFrames - root.frames);
         root.maxDebris = Math.max(root.maxDebris,game.state.debrisPieces || 0);
@@ -53,7 +53,12 @@ with tempfile.TemporaryDirectory(prefix="physical-qml-test-") as directory:
     else:
         env.pop("WAYLAND_DISPLAY", None)
     env.pop("HYPRLAND_INSTANCE_SIGNATURE", None)
-    run = subprocess.run(["quickshell", "--no-color", "-p", str(folder / "shell.qml")], env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=45)
+    try:
+        run = subprocess.run(["quickshell", "--no-color", "-p", str(folder / "shell.qml")], env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=45)
+    except subprocess.TimeoutExpired as error:
+        print((error.stdout or b"").decode(errors="replace"))
+        raise
+    if os.environ.get("PHYSICAL_TEST_DEBUG"): print(run.stdout)
     bad = [line for line in run.stdout.splitlines() if "WARN scene:" in line or "ERROR" in line]
     if run.returncode or "SMOKE PASS:" not in run.stdout or bad:
         print(run.stdout)

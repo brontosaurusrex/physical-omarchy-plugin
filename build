@@ -2,9 +2,19 @@
 set -euo pipefail
 project_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 mkdir -p "$project_dir/bin"
-# Build the local Qt drawing module against this machine's Qt libraries.
+# Build Wayland pointer-lock protocol bindings and the local Qt module.
+protocol_dir="$project_dir/bin/protocols"
+mkdir -p "$protocol_dir"
+for protocol in pointer-constraints relative-pointer; do
+  xml="/usr/share/wayland-protocols/unstable/$protocol/$protocol-unstable-v1.xml"
+  wayland-scanner client-header "$xml" "$protocol_dir/$protocol-client.h"
+  wayland-scanner private-code "$xml" "$protocol_dir/$protocol.c"
+  cc -O3 -fPIC -c "$protocol_dir/$protocol.c" $(pkg-config --cflags wayland-client) -o "$protocol_dir/$protocol.o"
+done
 /usr/lib/qt6/moc $(pkg-config --cflags Qt6Qml) "$project_dir/native/renderer.cpp" -o "$project_dir/bin/renderer.moc"
-g++ -O3 -std=c++17 -fPIC -shared "$project_dir/native/renderer.cpp" -I"$project_dir/bin" $(pkg-config --cflags --libs Qt6Quick Qt6Qml Qt6Gui) -o "$project_dir/native/libphysicalrenderer.so.new"
+/usr/lib/qt6/moc $(pkg-config --cflags Qt6Qml) "$project_dir/native/pointerlock.h" -o "$project_dir/bin/pointerlock.moc"
+g++ -O3 -std=c++17 -fPIC -c "$project_dir/native/pointerlock.cpp" -I"$project_dir/bin" -I"$protocol_dir" $(pkg-config --cflags Qt6Quick wayland-client) -o "$project_dir/bin/pointerlock.o"
+g++ -O3 -std=c++17 -fPIC -shared "$project_dir/native/renderer.cpp" "$project_dir/bin/pointerlock.o" "$protocol_dir/"*.o -I"$project_dir/bin" $(pkg-config --cflags --libs Qt6Quick Qt6Qml Qt6Gui wayland-client) -o "$project_dir/native/libphysicalrenderer.so.new"
 mv -f "$project_dir/native/libphysicalrenderer.so.new" "$project_dir/native/libphysicalrenderer.so"
 printf 'plugin physicalrenderer %s/native\n' "$project_dir" > "$project_dir/native/qmldir"
 cd "$project_dir/engine"

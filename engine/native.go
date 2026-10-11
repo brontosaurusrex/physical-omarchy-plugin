@@ -30,7 +30,7 @@ type nativeCommand struct {
 	Theme  map[string]string `json:"theme"`
 }
 
-var nativeVolume = 0.5
+var nativeVolume = 0.25
 
 const nativeVolumeKey = "physical.audioVolume"
 
@@ -122,7 +122,30 @@ func handleNativeCommand(c nativeCommand) {
 		gameLoop(js.Undefined(), nil)
 	case "key":
 		nativeKey(c)
+	case "pointer-lock":
+		mousePointerLocked = c.Down
+		mouseControlActive = c.Down
+		mousePaddleTargetX = paddle.x
+		leftPressed, rightPressed = false, false
+		paddle.vx = 0
+		resetPaddleSpinHistory()
+	case "relative-pointer":
+		if !mousePointerLocked || paused || physicsEditorVisible || replayModeActive {
+			return
+		}
+		mousePaddleTargetX = clampFloat(mousePaddleTargetX+c.X*defaultMousePointerLockSensitivity, 0, math.Max(0, canvasWidth-paddle.w))
+		mouseControlActive = true
+		leftPressed, rightPressed = false, false
+		if !gameOver && !waitingForStart && !levelAdvancePending {
+			paddle.x = mousePaddleTargetX
+		}
 	case "pointer":
+		if mousePointerLocked {
+			if c.Down {
+				nativeKey(nativeCommand{Key: " ", Code: "Space", Down: true})
+			}
+			return
+		}
 		if physicsEditorVisible || replayModeActive {
 			return
 		}
@@ -214,7 +237,7 @@ func emitNativeFrame(encoder *json.Encoder, action string) error {
 	}
 	packet := map[string]any{
 		"type": "frame", "action": action, "ops": ops, "caches": caches, "width": canvasWidth, "height": canvasHeight,
-		"state": map[string]any{"level": currentLevelIndex + 1, "levels": len(levels), "lives": lives, "score": score, "paused": paused, "ready": waitingForStart, "gameOver": gameOver, "win": win, "complete": levelAdvancePending, "balls": activeBallCount(), "remaining": remaining, "auto": autoPaddleEnabled, "sound": enableSounds, "volume": nativeVolume, "fps": fpsCurrent, "replay": replayModeActive, "replayFrames": len(replayFrames), "replayFrame": replayFrameIndex, "replayDirection": replayPlaybackDirection, "replaySpeed": replayPlaybackSpeed, "editor": physicsEditorVisible, "live": physicsEditorLiveSimulation, "debris": debrisEnabled, "debrisPieces": len(brickDebris), "corner": physicsConfig.cornerPhysicsEnabled, "allCorners": physicsConfig.cornerPhysicsAllBricks, "x": ball.x, "y": ball.y, "omega": ball.omega, "physicsSteps": physicsLastFrameSteps},
+		"state": map[string]any{"level": currentLevelIndex + 1, "levels": len(levels), "lives": lives, "score": score, "paused": paused, "ready": waitingForStart, "gameOver": gameOver, "win": win, "complete": levelAdvancePending, "balls": activeBallCount(), "remaining": remaining, "auto": autoPaddleEnabled, "sound": enableSounds, "volume": nativeVolume, "palette": palette, "fps": fpsCurrent, "replay": replayModeActive, "replayFrames": len(replayFrames), "replayFrame": replayFrameIndex, "replayDirection": replayPlaybackDirection, "replaySpeed": replayPlaybackSpeed, "editor": physicsEditorVisible, "live": physicsEditorLiveSimulation, "debris": debrisEnabled, "debrisPieces": len(brickDebris), "corner": physicsConfig.cornerPhysicsEnabled, "allCorners": physicsConfig.cornerPhysicsAllBricks, "x": ball.x, "y": ball.y, "omega": ball.omega, "physicsSteps": physicsLastFrameSteps},
 	}
 	if nativeTunerDirty {
 		packet["sliders"] = nativeTuner()
@@ -286,7 +309,7 @@ func nativeMain() {
 		}
 		js.BeginFrame()
 		handleNativeCommand(c)
-		if c.Action == "pointer" && !c.Down {
+		if (c.Action == "pointer" && !c.Down) || c.Action == "relative-pointer" {
 			continue
 		}
 		if err := emitNativeFrame(encoder, c.Action); err != nil {

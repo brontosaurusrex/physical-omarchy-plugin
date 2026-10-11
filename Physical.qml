@@ -6,6 +6,7 @@ import Quickshell.Io
 import Quickshell.Hyprland
 import qs.Commons
 import qs.Ui
+import "native" as Native
 
 Item {
     id: root
@@ -17,6 +18,50 @@ Item {
     // avoids halving the display rate while keeping the request queue short.
     property int ticksPending: 0
     property bool helpVisible: false
+    property bool menuVisible: false
+    property bool spaceHeld: false
+    property bool fullscreenChord: false
+    readonly property bool fullscreen: panel.fullscreen
+    readonly property bool mouseLocked: pointerLock.locked
+    readonly property var launchScreen: {
+        var screens = Quickshell.screens;
+        var monitor = Hyprland.focusedMonitor;
+        for (var i = 0; i < screens.length; ++i) if (monitor && screens[i].name === monitor.name) return screens[i];
+        return screens.length ? screens[0] : null;
+    }
+    readonly property int defaultWindowWidth: Math.min(1280, Math.floor((panel.screen ? panel.screen.width : 1280) * 0.9))
+    readonly property int defaultWindowHeight: Math.min(760, Math.floor((panel.screen ? panel.screen.height : 760) * 0.9))
+    readonly property color hudColor: state.palette && state.palette.length > 4 ? state.palette[4] : Color.foreground
+    function focusGame() { Qt.callLater(function() { gameInput.forceActiveFocus(); }); }
+    function toggleMenu() {
+        menuVisible = !menuVisible;
+        if (menuVisible) { pointerLock.release(); send({action: "pause"}); }
+        else helpVisible = false;
+        focusGame();
+    }
+    function closeMenu() { menuVisible = false; helpVisible = false; focusGame(); }
+    function toggleFullscreen() { pointerLock.release(); panel.fullscreen = !panel.fullscreen; focusGame(); }
+    function pressKey(event) {
+        if (event.key === Qt.Key_Space) { if (!event.isAutoRepeat) { spaceHeld = true; fullscreenChord = false; } return; }
+        if (event.key === Qt.Key_F && spaceHeld) { if (!event.isAutoRepeat) { toggleFullscreen(); fullscreenChord = true; } return; }
+        if (event.key === Qt.Key_Question) { if (!menuVisible) toggleMenu(); helpVisible = !helpVisible; return; }
+        if (event.key === Qt.Key_Escape) {
+            if (pointerLock.requested) { pointerLock.release(); return; }
+            if (menuVisible) { closeMenu(); return; }
+            if (panel.fullscreen) { toggleFullscreen(); return; }
+        }
+        if (event.key === Qt.Key_Q && !state.editor) { dismiss(); return; }
+        if (menuVisible) return;
+        send({ action: "key", key: keyName(event), code: keyName(event), down: true, repeat: event.isAutoRepeat, shift: (event.modifiers & Qt.ShiftModifier) !== 0 });
+    }
+    function releaseKey(event) {
+        if (event.isAutoRepeat) return;
+        if (event.key === Qt.Key_Space) {
+            if (spaceHeld && !fullscreenChord && !menuVisible) shortcut(" ", "Space");
+            spaceHeld = false; fullscreenChord = false; return;
+        }
+        send({ action: "key", key: keyName(event), code: keyName(event), down: false });
+    }
     property var state: ({})
     property var sliders: []
     property string errorText: ""
@@ -26,19 +71,22 @@ Item {
     property bool pointerDirty: false
     readonly property int paintedFrames: canvas.paintedFrames
     readonly property string renderError: canvas.renderError
+    readonly property var mouseCapture: pointerLock
+    readonly property var windowView: panel
     readonly property var gameView: canvas
     readonly property var contentView: card
     readonly property string windowPath: Qt.resolvedUrl("physical-window").toString().replace(/^file:\/\//, "")
     property bool windowSetupReady: false
     readonly property string enginePath: Qt.resolvedUrl("bin/physical-engine").toString().replace(/^file:\/\//, "")
     readonly property var theme: ({ background: String(Color.background), foreground: String(Color.foreground), accent: String(Color.accent), urgent: String(Color.urgent), muted: String(Color.muted) })
-    readonly property bool animating: opened && engineReady && !helpVisible && ((!state.paused && !state.ready && !state.gameOver && !state.complete && (!state.editor || state.live)) || (state.replay && state.replayDirection !== 0))
+    readonly property bool animating: opened && engineReady && !menuVisible && ((!state.paused && !state.ready && !state.gameOver && !state.complete && (!state.editor || state.live)) || (state.replay && state.replayDirection !== 0))
 
     function send(data) {
         if (!engineReady || !engine.running) return;
         engine.write(JSON.stringify(data) + "\n");
     }
     function open(payloadJson) {
+        panel.screen = launchScreen;
         opened = true;
         if (windowSetupReady || Quickshell.env("PHYSICAL_TESTING") === "1") panel.visible = true;
         else if (!windowSetup.running) windowSetup.running = true;
@@ -48,6 +96,8 @@ Item {
         Qt.callLater(function() { gameInput.forceActiveFocus(); });
     }
     function close() {
+        pointerLock.release();
+        spaceHeld = false; fullscreenChord = false; menuVisible = false; panel.fullscreen = false;
         send({ action: "visibility", down: false });
         audio.stop();
         opened = false;
@@ -96,6 +146,7 @@ Item {
         send({ action: "tick" });
     }
 
+    FontLoader { id: gameFont; source: "fonts/EnvyCodeRNerdFontMono-Bold.ttf"; }
     Process {
         id: engine
         command: [root.enginePath]
@@ -110,7 +161,7 @@ Item {
     }
     Process {
         id: windowSetup
-        command: [root.windowPath, String(Style.space(1280)), String(Style.space(760))]
+        command: [root.windowPath, String(root.defaultWindowWidth), String(root.defaultWindowHeight)]
         onExited: function(exitCode) {
             root.windowSetupReady = true;
             if (root.opened) { panel.visible = true; Qt.callLater(function() { gameInput.forceActiveFocus(); }); }
@@ -118,7 +169,7 @@ Item {
     }
     Timer { interval: 100; repeat: true; running: root.opened && root.engineReady && !root.animating; onTriggered: root.tick(); }
     Timer { id: noticeTimer; interval: 6000; onTriggered: root.notice = ""; }
-    AudioPool { id: audio; enabled: root.state.sound === true; volume: root.state.volume === undefined ? 0.5 : root.state.volume; }
+    AudioPool { id: audio; enabled: root.state.sound === true; volume: root.state.volume === undefined ? 0.25 : root.state.volume; }
     Connections {
         target: Hyprland
         function onRawEvent(event) {
@@ -133,7 +184,7 @@ Item {
                 if (String(parts[2]) === "org.omarchy.screensaver") root.dismiss();
             } else if (event.name === "activewindow") {
                 var active = event.parse(2);
-                if (String(active[1]) !== "Physical") { root.send({ action: "pause" }); audio.stop(); }
+                if (String(active[1]) !== "Physical") { pointerLock.release(); root.spaceHeld = false; root.send({ action: "pause" }); audio.stop(); }
             }
         }
     }
@@ -142,136 +193,111 @@ Item {
         id: panel
         visible: false
         title: "Physical"
-        color: Color.background
-        implicitWidth: Style.space(1280)
-        implicitHeight: Style.space(760)
-        minimumSize: Qt.size(Style.space(760), Style.space(460))
+        color: root.state.palette ? root.state.palette[0] : Color.background
+        implicitWidth: root.defaultWindowWidth
+        implicitHeight: root.defaultWindowHeight
+        minimumSize: Qt.size(Math.min(640, root.defaultWindowWidth), Math.min(360, root.defaultWindowHeight))
         onVisibleChanged: if (!visible && root.opened) root.dismiss()
 
         BorderSurface {
             id: card
             anchors.fill: parent
-            color: Color.background
+            color: panel.color
             borderSpec: Border.surfaceSpec("menu", "border", Color.menu.border, Math.max(1, Style.normalBorderWidth))
-            radius: Style.cornerRadius
+            radius: panel.fullscreen ? 0 : Style.cornerRadius
             FrameAnimation { running: root.animating; onTriggered: root.tick(); }
-
-            ColumnLayout {
+            Item {
+                id: playArea
                 anchors.fill: parent
-                anchors.margins: Style.space(14)
-                spacing: Style.space(10)
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: Style.space(8)
-                    Text { text: "PHYSICAL"; color: Color.accent; font.family: Style.fontFamily; font.pixelSize: Style.font.heading; }
-                    Text { text: root.engineReady ? "Level " + root.state.level + " / " + root.state.levels : "Starting…"; color: Color.muted; font.family: Style.fontFamily; font.pixelSize: Style.font.body; Layout.fillWidth: true; }
-                    GameButton { text: root.state.ready ? "Start" : root.state.paused ? "Resume" : "Pause"; enabled: root.engineReady && !root.state.editor; onClicked: root.shortcut(" ", "Space"); }
-                    GameButton { text: "Retry"; enabled: root.engineReady; onClicked: { root.send({ action: "restart" }); gameInput.forceActiveFocus(); } }
-                    GameButton { text: "Lab"; selected: root.state.editor === true; enabled: root.engineReady; onClicked: root.shortcut("e", "KeyE"); }
-                    GameButton { text: "?"; selected: root.helpVisible; onClicked: { root.helpVisible = !root.helpVisible; if (root.helpVisible) root.send({ action: "pause" }); gameInput.forceActiveFocus(); } }
-                    GameButton { text: "×"; onClicked: root.dismiss(); }
-                }
+                anchors.margins: panel.fullscreen ? 0 : 2
                 Item {
-                    id: playArea
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    Item {
-                        id: gameInput
-                        anchors.centerIn: parent
-                        width: Math.min(parent.width, parent.height * canvas.gameWidth / canvas.gameHeight)
-                        height: width * canvas.gameHeight / canvas.gameWidth
-                        focus: true
-                        GameCanvas { id: canvas; objectName: "physicalCanvas"; anchors.fill: parent; theme: root.theme; fontFamily: Style.resolvedFontFamily; }
-                        MouseArea {
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            acceptedButtons: Qt.LeftButton
-                            onPositionChanged: function(mouse) { root.pointerX = mouse.x * canvas.gameWidth / width; root.pointerY = mouse.y * canvas.gameHeight / height; root.pointerDirty = true; }
-                            onPressed: function(mouse) { gameInput.forceActiveFocus(); root.send({ action: "pointer", down: true, x: mouse.x * canvas.gameWidth / width, y: mouse.y * canvas.gameHeight / height }); }
+                    id: gameInput
+                    anchors.centerIn: parent
+                    width: Math.min(parent.width, parent.height * canvas.gameWidth / canvas.gameHeight)
+                    height: width * canvas.gameHeight / canvas.gameWidth
+                    focus: true
+                    onWidthChanged: pointerLock.release()
+                    onHeightChanged: pointerLock.release()
+                    GameCanvas { id: canvas; objectName: "physicalCanvas"; anchors.fill: parent; theme: root.theme; fontFamily: gameFont.status === FontLoader.Ready ? gameFont.name : Style.resolvedFontFamily; }
+                    Native.PointerLock {
+                        id: pointerLock
+                        anchors.fill: parent
+                        onLockedChanged: { root.pointerDirty = false; root.send({action: "pointer-lock", down: locked}); }
+                        onRelativeMotion: function(dx, dy) { root.send({action: "relative-pointer", x: dx * canvas.gameWidth / gameInput.width}); }
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
+                        cursorShape: pointerLock.locked ? Qt.BlankCursor : Qt.ArrowCursor
+                        onPositionChanged: function(mouse) {
+                            if (pointerLock.requested) return;
+                            root.pointerX = mouse.x * canvas.gameWidth / width;
+                            root.pointerY = mouse.y * canvas.gameHeight / height;
+                            root.pointerDirty = true;
                         }
-                        Keys.onPressed: function(event) {
-                            if (event.key === Qt.Key_Q && !root.state.editor) { root.dismiss(); event.accepted = true; return; }
-                            if (event.key === Qt.Key_Question) { root.helpVisible = !root.helpVisible; if (root.helpVisible) root.send({ action: "pause" }); event.accepted = true; return; }
-                            if (root.helpVisible && event.key === Qt.Key_Escape) { root.helpVisible = false; event.accepted = true; return; }
-                            if (root.helpVisible) return;
-                            root.send({ action: "key", key: root.keyName(event), code: root.keyName(event), down: true, repeat: event.isAutoRepeat, shift: (event.modifiers & Qt.ShiftModifier) !== 0 });
-                            event.accepted = true;
-                        }
-                        Keys.onReleased: function(event) {
-                            if (event.isAutoRepeat) return;
-                            root.send({ action: "key", key: root.keyName(event), code: root.keyName(event), down: false });
-                            event.accepted = true;
+                        onPressed: function(mouse) {
+                            gameInput.forceActiveFocus();
+                            if (mouse.button === Qt.RightButton) {
+                                if (pointerLock.requested) pointerLock.release();
+                                else if (!pointerLock.lock()) { root.notice = "Mouse capture unavailable"; noticeTimer.restart(); }
+                            } else root.send({ action: "pointer", down: true, x: mouse.x * canvas.gameWidth / width, y: mouse.y * canvas.gameHeight / height });
                         }
                     }
-                    Rectangle {
-                        anchors.centerIn: parent
-                        width: Math.min(parent.width - Style.space(24), Style.space(740))
-                        height: help.implicitHeight + Style.space(48)
-                        visible: root.helpVisible
-                        color: Color.menu.background
-                        border.color: Color.menu.border
-                        border.width: 1
-                        radius: Style.cornerRadius
-                        MouseArea { anchors.fill: parent; }
-                        Text {
-                            id: help
-                            anchors.fill: parent
-                            anchors.margins: Style.space(24)
-                            text: "PHYSICAL\n\nMouse / ← → / A D   Move paddle\nSpace / Enter / click   Start or continue\nSpace / Esc   Pause\nPage Up / Down   Unlocked levels\nO   Automatic paddle (assisted)\nR   Debris on / off     S   Sound on / off\nM / Z   Magnets / zapper     2   Extra ball\nP   Diagnostics     F   Engine FPS\nE   Physics lab\n\nJ / K / L   Reverse / pause / forward replay\n← → / Home / End   Scrub replay\nEsc   Leave replay\nV / B   Export SVG / SVG with motion trails\n\n?   Help     Q   Close plugin\n\nClosing or switching windows pauses the game."
-                            color: Color.foreground
-                            font.family: Style.fontFamily
-                            font.pixelSize: Style.font.subtitle
-                            lineHeight: 1.25
-                            wrapMode: Text.WordWrap
-                        }
-                    }
-                    Loader {
+                    Keys.onPressed: function(event) { root.pressKey(event); event.accepted = true; }
+                    Keys.onReleased: function(event) { root.releaseKey(event); event.accepted = true; }
+                    Row {
                         anchors.top: parent.top
-                        anchors.bottom: parent.bottom
                         anchors.right: parent.right
-                        width: Math.min(Style.space(420), parent.width * 0.46)
-                        active: root.state.editor === true && !root.helpVisible
-                        sourceComponent: Tuner {
-                            state: root.state
-                            sliders: root.sliders
-                            onCommand: function(data) { root.send(data); }
-                            onDismissed: root.shortcut("e", "KeyE")
-                        }
+                        anchors.margins: 14
+                        spacing: 8
+                        HudButton { icon: root.state.paused || root.state.ready ? "play" : "pause"; foreground: root.hudColor; onClicked: { pointerLock.release(); root.shortcut(" ", "Space"); } }
+                        HudButton { icon: "fullscreen"; foreground: root.hudColor; onClicked: root.toggleFullscreen(); }
+                        HudButton { icon: "menu"; foreground: root.hudColor; onClicked: root.toggleMenu(); }
                     }
                 }
-                RowLayout {
-                    Layout.fillWidth: true
+                Loader {
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    anchors.right: parent.right
+                    width: Math.min(Style.space(420), parent.width * 0.46)
+                    active: root.state.editor === true && !root.menuVisible
+                    sourceComponent: Tuner {
+                        state: root.state
+                        sliders: root.sliders
+                        onCommand: function(data) { root.send(data); }
+                        onDismissed: root.shortcut("e", "KeyE")
+                    }
+                }
+                MouseArea { anchors.fill: parent; visible: root.menuVisible; acceptedButtons: Qt.AllButtons; onClicked: root.closeMenu(); }
+                GameMenu {
+                    anchors.top: parent.top
+                    anchors.right: parent.right
+                    anchors.margins: 12
+                    width: Math.min(Style.space(360), parent.width - 24)
+                    height: Math.min(implicitHeight, parent.height - 24)
+                    visible: root.menuVisible
+                    controller: root
+                }
+                Rectangle {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: 16
+                    width: Math.min(parent.width - 32, toast.implicitWidth + 24)
+                    height: toast.implicitHeight + 16
+                    visible: !!toast.text
+                    color: Color.menu.background
+                    radius: Style.cornerRadius
                     Text {
-                        Layout.fillWidth: true
-                        text: root.errorText || canvas.renderError || root.notice || (root.state.replay ? "Replay · " + (root.state.replayFrame + 1) + " / " + root.state.replayFrames + " · " + root.state.replaySpeed + "×" : "Mouse / ← →   ·   Space pause   ·   J K L replay   ·   ? help")
-                        color: root.errorText || canvas.renderError ? Color.urgent : Color.muted
+                        id: toast
+                        anchors.centerIn: parent
+                        width: Math.min(implicitWidth, parent.width - 24)
+                        text: root.errorText || canvas.renderError || root.notice
+                        color: root.errorText || canvas.renderError ? Color.urgent : Color.foreground
                         font.family: Style.fontFamily
                         font.pixelSize: Style.font.bodySmall
-                        elide: Text.ElideMiddle
+                        wrapMode: Text.Wrap
                     }
-                    Text { text: "Volume " + Math.round(volumeSlider.value * 100) + "%"; color: Color.muted; font.family: Style.fontFamily; font.pixelSize: Style.font.bodySmall; }
-                    QQC.Slider {
-                        id: volumeSlider
-                        objectName: "audio-volume"
-                        Layout.preferredWidth: Style.space(110)
-                        implicitHeight: Style.space(24)
-                        from: 0; to: 1; stepSize: 0.01
-                        value: root.state.volume === undefined ? 0.5 : root.state.volume
-                        onMoved: root.send({ action: "volume", value: value })
-                        background: Rectangle {
-                            x: volumeSlider.leftPadding
-                            y: volumeSlider.topPadding + volumeSlider.availableHeight / 2 - height / 2
-                            width: volumeSlider.availableWidth; height: 3; color: Color.muted
-                            Rectangle { width: volumeSlider.visualPosition * parent.width; height: parent.height; color: Color.accent; }
-                        }
-                        handle: Rectangle {
-                            x: volumeSlider.leftPadding + volumeSlider.visualPosition * (volumeSlider.availableWidth - width)
-                            y: volumeSlider.topPadding + volumeSlider.availableHeight / 2 - height / 2
-                            width: Style.space(12); height: width; radius: width / 2
-                            color: volumeSlider.pressed ? Color.accent : Color.foreground
-                        }
-                    }
-                    Text { text: (root.state.auto ? "AUTO · " : "") + (root.state.sound ? "SOUND ON" : "MUTED"); color: Color.muted; font.family: Style.fontFamily; font.pixelSize: Style.font.bodySmall; }
                 }
             }
         }
