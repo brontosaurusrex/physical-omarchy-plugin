@@ -1,0 +1,52 @@
+enablePassThrough=true
+enableBlackHole=true
+brickWidth=15
+brickHeight=30
+brickPadding=10
+//maxSpeed=1050
+enableZapper=true
+ballX=1500
+ballY=23
+ballVx=200
+ballVy=2
+audioRoom=bigopenroom
+audioRoomDry=0.80
+title="HELLO"
+
+backgroundColor=#352F44
+paddleColor=#FAF0E6
+brickColor=#B9B4C7
+brickStrokeColor=#B9B4C7
+unbreakableColor=#5C5470
+unbreakableStrokeColor=#5C5470
+magicColor=#FAF0E6
+magicStrokeColor=#FAF0E6
+ballColor=#FAF0E6
+spinColor=#FAF0E6
+secondBallColor=#FAF0E6
+textColor=#FAF0E6
+secondBallSpinColor=#FAF0E6
+
+
+
+---
+M//     M//           M// M//                 
+M//     M//           M// M//                 
+M//     M//   M//     M// M//   M//           
+M////// M// M/   M//  M// M// M//  M//        
+M//     M//M///// M// M// M//M//    M//       
+M//     M//M/         M// M// M//  M//        
+M//     M//  M////   M///M///   M//           
+                                              
+M//        M//                  M//     M//M//
+M//        M//                  M//     M//M//
+M//   M/   M//   M//    M/ M/// M//     M//M//
+M//  M//   M// M//  M//  M//    M// M// M//M/ 
+M// M/ M// M//M//    M// M//    M//M/   M//M/ 
+M/ M/    M//// M//  M//  M//    M//M/   M//   
+MUU        MUU   MUU    MUUU   MUUU MUU MUUMUU
+
+
+
+
+

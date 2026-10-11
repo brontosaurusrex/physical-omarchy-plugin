@@ -1,0 +1,56 @@
+backgroundColor=#1f1a3a
+paddleColor=#4b3879
+brickColor=#4b3879
+brickStrokeColor=#ffcc00
+ballColor=#00ffff
+textColor=#00ffff
+spinColor=#00ffff
+secondBallColor=#00ffff
+secondBallSpinColor=#00ffff
+magicStrokeColor=#ffd700
+unbreakableColor=#ff3366
+unbreakableStrokeColor=#ff3366
+
+brickWidth=450
+brickHeight=450
+ballX=150.0
+ballY=20.0
+ballVx=30.0
+ballVy=-30.0
+audioRoom=space
+audioRoomDry=0.75
+
+gravity=650
+restitution=0.90
+airDrag=0.083
+magnusCoefficient=0.0061
+magnusAccelerationScale=0.51
+spinDrag=0.090
+maxSpeed=1100
+maxSpin=650
+paddleBoost=2925
+brickBoost=300
+paddleSpinTransfer=2.80
+mousePaddleSpinVelocityLimit=3000
+paddleFrictionScale=3.20
+minimumPaddleGrip=0.55
+collisionSpinCoupling=2.00
+paddleSpinGraceSeconds=0.135
+frictionCoeff=0.14
+wallFrictionScale=2.00
+brickFrictionScale=2.00
+unbreakableFrictionScale=1.80
+overspeedHalfLife=0.35
+wallTopTiltDegrees=8.00
+wallSideTiltDegrees=4.00
+brickTiltMaxDegrees=4.55
+title="GAME ON"
+---
+
+M   ##
+MM  #U##
+M # #U##
+ ## UU
+ #    MM
+UUUU   MM
+

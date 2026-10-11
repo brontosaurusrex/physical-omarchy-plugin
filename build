@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+project_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+mkdir -p "$project_dir/bin"
+# Build the local Qt drawing module against this machine's Qt libraries.
+/usr/lib/qt6/moc $(pkg-config --cflags Qt6Qml) "$project_dir/native/renderer.cpp" -o "$project_dir/bin/renderer.moc"
+g++ -O3 -std=c++17 -fPIC -shared "$project_dir/native/renderer.cpp" -I"$project_dir/bin" $(pkg-config --cflags --libs Qt6Quick Qt6Qml Qt6Gui) -o "$project_dir/native/libphysicalrenderer.so.new"
+mv -f "$project_dir/native/libphysicalrenderer.so.new" "$project_dir/native/libphysicalrenderer.so"
+printf 'plugin physicalrenderer %s/native\n' "$project_dir" > "$project_dir/native/qmldir"
+cd "$project_dir/engine"
+go build -buildvcs=false -trimpath -o "$project_dir/bin/physical-engine" .
+echo "Built $project_dir/bin/physical-engine"

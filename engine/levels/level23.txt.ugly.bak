@@ -1,0 +1,52 @@
+# Level 23: Paddle Siege
+# The brick formation sits unusually low; heavy gravity makes reaction time short.
+gravity=850
+restitution=0.82
+frictionCoeff=0.12
+maxSpin=45
+paddleBoost=1550
+brickBoost=120
+maxSpeed=1550
+brickWidth=52
+brickHeight=28
+brickPadding=8
+brickOffsetTop=200
+paddleWidth=270
+paddleHeight=26
+ballX=900
+ballY=100
+ballVx=500
+ballVy=350
+ballRadius=12
+powerUpDuration=10
+enableBlackHole=false
+enableReverseGravity=false
+enablePassThrough=false
+enableNuke=false
+enableBreakUnbreakable=false
+backgroundColor=#201a17
+paddleColor=#ffd166
+brickColor=#ef476f
+brickStrokeColor=#ff8fab
+unbreakableColor=#403d39
+unbreakableStrokeColor=#adb5bd
+magicColor=#06d6a0
+magicStrokeColor=#b7efc5
+ballColor=#f8f9fa
+spinColor=#f8f9fa
+secondBallColor=#4cc9f0
+secondBallSpinColor=#4cc9f0
+textColor=#f8f9fa
+---
+UUUUU   UUUUUUU   UUUUU
+#####   #######   #####
+##M##   ##MMM##   ##M##
+#####   #######   #####
+   ### UUU###UUU ###
+   #M# U  #M#  U #M#
+   ### U  ###  U ###
+       UUU   UUU
+         MMMMM
+
+
+ 

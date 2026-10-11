@@ -1,0 +1,46 @@
+gravity=180
+brickWidth=52
+brickHeight=26
+brickPadding=14
+brickOffsetTop=70
+ballX=900
+ballY=720
+ballVx=-260
+ballVy=-380
+ballRadius=10
+powerUpDuration=12
+
+
+["#ffbe0b","#fb5607","#ff006e","#8338ec","#3a86ff"]
+
+
+backgroundColor=#3a86ff
+paddleColor#ffbe0b
+brickColor=#ff006e
+ballColor=#ffbe0b
+textColor=#ffbe0b
+spinColor=#ffbe0b
+unbreakableColor=#8338ec
+secondBallColor=#fb5607
+secondBallSpinColor=#fb5607
+
+magicColor=#ffbe0b
+magicStrokeColor=#ffbe0b
+unbreakableStrokeColor=#8338ec
+brickStrokeColor=#8338ec
+
+
+---
+           UU           
+         U####U         
+       U###MM###U       
+     U###M####M###U     
+   U###M########M###U   
+ U###M############M###U 
+U###M######MM######M###U
+ U###M############M###U 
+   U###M########M###U   
+     U###M####M###U     
+       U###MM###U       
+         U####U         
+           UU           

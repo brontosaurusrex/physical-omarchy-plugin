@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+project_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+target_dir="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/plugins/b.physical"
+"$project_dir/build"
+omarchy plugin validate "$project_dir"
+mkdir -p "$target_dir"
+if [[ -f $target_dir/manifest.json ]] && [[ $(jq -r .id "$target_dir/manifest.json") != b.physical ]]; then
+  echo "Refusing to overwrite a different plugin at $target_dir" >&2
+  exit 1
+fi
+# Replace the executable atomically so reinstalling works while it is running.
+mkdir -p "$target_dir/bin"
+engine_temp=$(mktemp "$target_dir/bin/.physical-engine.XXXXXX")
+trap 'rm -f -- "$engine_temp"' EXIT
+cp -a "$project_dir/bin/physical-engine" "$engine_temp"
+mv -f -- "$engine_temp" "$target_dir/bin/physical-engine"
+# Install a copy: Omarchy rejects symlinks in plugin packages.
+for entry in manifest.json Physical.qml BarWidget.qml BallWidget.qml GameButton.qml GameCanvas.qml Tuner.qml AudioPool.qml CanvasRenderer.js physical-window sounds; do
+  cp -a "$project_dir/$entry" "$target_dir/"
+done
+mkdir -p "$target_dir/native"
+renderer_temp=$(mktemp "$target_dir/native/.physicalrenderer.XXXXXX")
+cp -a "$project_dir/native/libphysicalrenderer.so" "$renderer_temp"
+mv -f -- "$renderer_temp" "$target_dir/native/libphysicalrenderer.so"
+printf 'plugin physicalrenderer %s/native\n' "$target_dir" > "$target_dir/native/qmldir"
+omarchy plugin validate "$target_dir"
+omarchy-shell shell rescanPlugins
+omarchy plugin enable b.physical --section left
+echo "Installed Physical. Open it from the white ball icon or: omarchy-shell shell toggle b.physical"

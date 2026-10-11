@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "b.physical",
+  "name": "Physical",
+  "version": "0.2.0",
+  "author": "brontosaurusrex",
+  "description": "Native Physical brick breaker with Go physics, accelerated Qt rendering, replay, and original level palettes.",
+  "keywords": [
+    "game",
+    "physics",
+    "breakout",
+    "replay"
+  ],
+  "kinds": [
+    "panel",
+    "bar-widget"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "panel": "Physical.qml",
+    "barWidget": "BallWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Physical",
+    "description": "Play Physical",
+    "category": "Games",
+    "allowMultiple": false,
+    "defaultSection": "left"
+  }
+}

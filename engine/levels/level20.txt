@@ -1,0 +1,65 @@
+enablePassThrough=false
+enableBlackHole=true
+ballX=40.0
+ballY=100.0
+ballVx=1.0
+ballVy=-1.0
+brickWidth=40
+brickHeight=40
+brickPadding=20
+
+ballRadius=10.0
+
+backgroundColor=#352F44
+paddleColor=#FAF0E6
+brickColor=#B9B4C7
+brickStrokeColor=#B9B4C7
+unbreakableColor=#5C5470
+unbreakableStrokeColor=#5C5470
+magicColor=#FAF0E6
+magicStrokeColor=#FAF0E6
+ballColor=#FAF0E6
+spinColor=#FAF0E6
+secondBallColor=#FAF0E6
+textColor=#FAF0E6
+secondBallSpinColor=#FAF0E6
+
+stuckSpeedThreshold=250
+stuckDuration=1.9
+tiltUpSpeed=-2600
+tiltSideMin=280
+tiltSideMax=420
+enableZapper=true
+powerUpDuration=25
+audioRoom=space
+audioRoomDry=0.80
+title="THE SPOT"
+---                                                         
+                                 XX                      
+                                XXXXX                    
+                       X        XXXXXX                   
+                      XXX      XXXXXX                    
+          X           XXXXX   XXXXXXX                    
+      XXXXX          XXXXXXXX XXXXXX                     
+      XXXXX          XXXXXXXXXXXXXXX                     
+      XXXXXX         XXXXXXXXXXXXXX                      
+      XXXXXX           XXXXXXXXXXX                       
+       XXXXX             XXXXXXXXXXX                     
+       XXXXXX    XXX       XXXXXXXXXXX                   
+       XXXXXXXXXXXXXX     XXXXXXXXXXXXX                  
+       XXXXXXXXXXXXXX     XXXXXXXXXXXXXX                 
+      XXXXXXXXXXXXXXX    XXXXXX XXXXXXXX                 
+  XXXXXXXXXXXXXXXXXXX    XXXXXX   XXXXXX                 
+XXXXXXXXXXXXXXXXXXX     XXXXXX     XXXX                  
+ XXXXXXXXXXXXXX        XXXXXXX       X                   
+ XXXXXXXXXXXXX          XXXXX                            
+ XXXXXXX XXXXXX          XXXX                            
+ XXX     XXXXXX            X                             
+          XXXXX                                          
+          XXXXX                                          
+          XXXXXX                                         
+          XXXXXX                                         
+           XXXX                                          
+                                         
+
+

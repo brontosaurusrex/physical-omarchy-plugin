@@ -1,0 +1,55 @@
+backgroundColor=#0F0F0F
+textColor=#FF41DC
+paddleColor=#FF41DC
+brickColor=#476DF5
+brickStrokeColor=#476DF5
+unbreakableColor=#173D75
+unbreakableStrokeColor=#173D75
+magicColor=#C15DE8
+magicStrokeColor=#C15DE8
+ballColor=#FF41DC
+spinColor=#FF41DC
+secondBallColor=#FF41DC
+secondBallSpinColor=#FF41DC
+
+brickWidth=80
+brickHeight=160
+ballX=150.0
+ballY=320.0
+ballVx=30.0
+ballVy=-30.0
+audioRoom=space
+audioRoomDry=0.50
+
+stuckSpeedThreshold=350
+stuckDuration=1.9
+tiltUpSpeed=-2600
+tiltSideMin=280
+tiltSideMax=1420
+
+spinDrag=0.040
+maxSpeed=920
+maxSpin=1530
+paddleBoost=2000
+
+paddleBoost=1300
+title="SPIRAL"
+---
+                                        
+           XXXXXXXXXXXX      XX           
+        XXX           XXX     XX          
+      XX                 XX    XX         
+     XX     XXXXXXXXX     XX    XX        
+    XX     XX       XX     XX    XX       
+   XX     X      MM  XX    XX    XX       
+   XX    XX    XXMM  XX    XX    XX       
+   XX    XX    XX   XX     XX    XX       
+    U     U      UUU      UU    UU        
+    UU     UU           UUU     U        
+     UU     UUU      UUUU     UUU         
+      UU        UUUUU        UU           
+        UU                 UU            
+          UUUU         UUUU               
+              UUUUUUUUU                   
+                                          
+                                      

@@ -1,0 +1,60 @@
+# Level 24: Floating Islands
+# Separate clusters force long cross-screen travel instead of clearing one solid mass.
+//gravity=240
+//restitution=0.90
+//frictionCoeff=0.06
+//maxSpin=60
+paddleBoost=850
+//brickBoost=90
+maxSpeed=1200
+brickWidth=44
+brickHeight=44
+brickPadding=12
+brickOffsetTop=80
+paddleWidth=210
+ballX=620
+ballY=300
+ballVx=-10
+ballVy=-390
+ballRadius=9
+powerUpDuration=18
+enableBlackHole=false
+enablePassThrough=false
+enableDualBalls=true
+enableZapper=true
+enableNuke=false
+enableBreakUnbreakable=false
+backgroundColor=#001219
+paddleColor=#e9d8a6
+brickColor=#0a9396
+brickStrokeColor=#94d2bd
+unbreakableColor=#005f73
+unbreakableStrokeColor=#83c5be
+magicColor=#ee9b00
+magicStrokeColor=#ffb703
+ballColor=#fefae0
+spinColor=#fefae0
+secondBallColor=#ca6702
+secondBallSpinColor=#ca6702
+textColor=#e9d8a6
+audioRoom=matrix
+audioRoomDry=0.50
+---
+
+M#M       ###       M#M
+###       #M#       ###
+M#M       ###       M#M
+
+    UUUUU     U   U
+    U # U     U # U
+    U M U     U M U
+    U # U     U # U
+    U # U     UUUUU
+
+###       M#M       ###
+#M#       ###       #M#
+###       M#M       ###
+
+
+
+

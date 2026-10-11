@@ -1,0 +1,37 @@
+brickWidth=30
+ballX=100.0
+ballY=100.0
+ballVx=1.0
+ballVy=-1.0
+brickHeight=30
+brickPadding=30
+ballRadius=10.0
+
+backgroundColor=#361640
+paddleColor=#e89c5b
+brickColor=#d96055
+brickStrokeColor=#d96055
+unbreakableColor=#a36655
+unbreakableStrokeColor=#a36655
+magicColor=#e89c5b
+magicStrokeColor=#e89c5b
+ballColor=#e89c5b
+spinColor=#e89c5b
+secondBallColor=#c7cbd1
+textColor=#e89c5b
+secondBallSpinColor=#c7cbd1
+
+audioRoom=cave
+audioRoomDry=0.50
+title="TEMPLE"
+---
+U      ####MM       U
+U      MM####       U
+U      ####MM       U
+U      MM####       U
+U      ####MM       U
+       MMMMMM
+UUUUUUUUUUUUUUUUUUUUU
+
+
+

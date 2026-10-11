@@ -1,0 +1,49 @@
+brickPadding=15.0
+brickWidth=40
+brickHeight=40
+
+backgroundColor=#0d0f12
+paddleColor=#d8dbe0
+brickColor=#9ca1a8
+brickStrokeColor=#c9cdd2
+unbreakableColor=#292d33
+unbreakableStrokeColor=#666c75
+magicColor=#f1faee
+magicStrokeColor=#ffffff
+ballColor=#ffffff
+spinColor=#ffffff
+secondBallColor=#c7cbd1
+textColor=#e7e9ec
+secondBallSpinColor=#8d939b
+
+ballX=900
+ballY=7
+ballVx=-2
+ballVy=-30
+
+stuckSpeedThreshold=250
+stuckDuration=1.9
+tiltUpSpeed=-2600
+tiltSideMin=280
+tiltSideMax=420
+
+title="NUMBER OF THE BEAST"
+---
+      oe          oe    
+    .@XX        .@XX    
+==*XXXXX    ==*XXXXX    
+   XXXXX       XXXXX    
+   XXXXX       XXXXX    
+   XXXXX       XXXXX    
+   XXXXX       XXXXX    
+   XXXXX       XXXXX    
+   XXXXX       XXXXX    
+   XXXXX       XXXXX
+XXXXXXXXXXX XXXXXXXXXXX
+UUUUUUUUUUU UUUUUUUUUUU
+
+
+
+
+
+       

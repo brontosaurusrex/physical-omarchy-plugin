@@ -1,0 +1,40 @@
+enablePassThrough=true
+enableBlackHole=true
+brickPadding=15.0
+frictionCoeff=0.25
+ballRadius=30.0
+stuckSpeedThreshold=250
+stuckDuration=0.4
+tiltUpSpeed=-100
+tiltSideMin=280
+tiltSideMax=620
+backgroundColor=#0d0f12
+paddleColor=#d8dbe0
+brickColor=#9ca1a8
+brickStrokeColor=#c9cdd2
+unbreakableColor=#292d33
+unbreakableStrokeColor=#666c75
+magicColor=#f1faee
+magicStrokeColor=#ffffff
+ballColor=#ffffff
+spinColor=#ffffff
+secondBallColor=#c7cbd1
+textColor=#e7e9ec
+secondBallSpinColor=#8d939b
+//maxSpeed=950
+audioRoom=cave
+audioRoomDry=0.75
+title="TRICKY"
+---
+M######## ########M
+M########M########M
+M######## ########M
+M######## ########M
+M######## ########M
+UUUUMUUUU UUUUMUUUU
+
+
+
+
+
+

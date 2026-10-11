@@ -1,0 +1,129 @@
+backgroundColor=#5A1765
+textColor=#F68AA2
+paddleColor=#F68AA2
+brickColor=#A85183
+brickStrokeColor=#A85183
+unbreakableColor=#813474
+unbreakableStrokeColor=#813474
+magicColor=#CF6D93
+magicStrokeColor=#CF6D93
+ballColor=#F68AA2
+spinColor=#F68AA2
+secondBallColor=#F68AA2
+secondBallSpinColor=#F68AA2
+
+backgroundColor=#222940
+textColor=#53518C
+paddleColor=#53518C
+brickColor=#F25C5C
+brickStrokeColor=#F25C5C
+unbreakableColor=#53518C
+unbreakableStrokeColor=#53518C
+magicColor=#F29C50
+magicStrokeColor=#F29C50
+ballColor=#53518C
+spinColor=#53518C
+secondBallColor=#53518C
+secondBallSpinColor=#53518C
+
+brickWidth=80
+brickHeight=80
+ballX=150.0
+ballY=320.0
+ballVx=30.0
+ballVy=-30.0
+audioRoom=space
+audioRoomDry=0.50
+
+# ballRadius=7.0
+autoPaddleHitVariation=0.65
+cornerPhysicsEnabled=true
+cornerPhysicsAllBricks=false
+gravity=450
+restitution=0.90
+airDrag=0.100
+magnusCoefficient=0.0083
+magnusAccelerationScale=0.85
+spinDrag=0.300
+maxSpeed=920
+maxSpin=1530
+paddleBoost=900
+brickBoost=200
+paddleSpinTransfer=2.80
+mousePaddleSpinVelocityLimit=3000
+paddleFrictionScale=3.20
+minimumPaddleGrip=0.55
+collisionSpinCoupling=2.00
+paddleSpinGraceSeconds=0.050
+frictionCoeff=0.14
+wallFrictionScale=2.00
+brickFrictionScale=2.00
+unbreakableFrictionScale=1.80
+overspeedHalfLife=0.35
+wallTopTiltDegrees=30.45
+wallSideTiltDegrees=0.15
+cornerPhysicsAmount=1.00
+#brickTiltMaxDegrees=25.00
+debris=true
+debrisPiecesMin=6
+debrisPiecesMax=18
+debrisMaxActivePieces=150
+debrisLifetime=9.0
+debrisLifetimeVariationPercent=56.7
+debrisFadeDuration=3.0
+debrisStartOpacity=0.35
+debrisStartOpacityVariation=0.25
+debrisFlashDuration=0.10
+debrisFlashOpacity=1.00
+debrisSizeScale=1.00
+debrisBallPieceChance=0.18
+debrisTrianglePieceChance=0.14
+debrisStarPieceChance=0.06
+debrisStarPointsMin=4
+debrisStarPointsMax=7
+debrisGlassPieceChance=0.20
+debrisGlassCornersMin=7
+debrisGlassCornersMax=14
+debrisSliverPieceChance=0.015
+debrisMaxChunkAspectRatio=1.45
+debrisExplosionSpeedMin=120
+debrisExplosionSpeedMax=1520
+debrisImpactSpeedFactor=0.35
+debrisAngularSpeedMin=2.00
+debrisAngularSpeedMax=6.00
+debrisGravityScale=0.70
+debrisAirDrag=0.15
+debrisAngularDrag=1.10
+debrisAngularStopSpeed=0.10
+debrisMaxSpeed=1100
+debrisFrontLayerSpeed=600
+debrisOffscreenMargin=120
+debrisBrickCollisionDelay=0.25
+debrisRestitution=0.48
+debrisFriction=1.00
+debrisBallInfluence=0.00
+debrisFieldScale=0.80
+debrisMagnetScale=0.65
+
+title="CURVES"
+---
+                              U                                
+   XX XXXX XX                 U      XXX X X                   
+   X XX  XX X                     XXX    XXX                   
+    XX    X XX                    X X      XXX                 
+ XXX       X XX               U   XXX      X X                 
+ X X       XX X               U XXX        X  X                
+ X X        X  X              U X X         X X                
+  X          X X              UXXXX         X XX               
+ XX          X  X             UX X           X X               
+ X            X X              XXX           XX X            X 
+ X            X  X           X XX             X X            X 
+               X X           XU X             X  X          XX 
+               X  X         XXUXX              X X          X  
+                X X         X UX               X  X        X X 
+                XX X        XXUX                X XX       X X 
+                 X X      XXX U                 XX X       XXX 
+                 XXX      X X                    X  X    XX    
+                   XXX    XXX                     X XX  XX X   
+                   X X XXX    U                   XX XXXX XX   
+                              U                                

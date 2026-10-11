@@ -1,0 +1,8 @@
+/bin/physical-engine
+__pycache__/
+*.pyc
+
+/bin/renderer.moc
+/native/libphysicalrenderer.so*
+/native/qmldir
+/bin/renderer-test

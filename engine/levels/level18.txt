@@ -1,0 +1,53 @@
+//gravity=300
+
+//maxSpeed=800
+//paddleBoost=1300
+//paddleWidth=180
+brickBoost=600
+//ballRadius=18
+
+backgroundColor=#0d0f12
+paddleColor=#d8dbe0
+brickColor=#9ca1a8
+brickStrokeColor=#c9cdd2
+unbreakableColor=#292d33
+unbreakableStrokeColor=#666c75
+magicColor=#f1faee
+magicStrokeColor=#ffffff
+ballColor=#ffffff
+spinColor=#ffffff
+secondBallColor=#c7cbd1
+textColor=#e7e9ec
+secondBallSpinColor=#8d939b
+
+
+brickWidth=80
+brickHeight=120
+ballX=150.0
+ballY=20.0
+ballVx=30.0
+ballVy=-30.0
+audioRoom=space
+audioRoomDry=0.50
+
+title="A   L   I   E   N"
+---
+      XXXXXXXXXXXXXXXX
+   XXXX              XXX
+  XX   XXXXXXXXXXXXXX  XXX
+ XX  XXX            XXX  XXX
+XX  XX   XXXXXXXXXX   XX  XX
+X  XX  XXX        XXX  XX  X
+X  XX  XX  MMMMMM  XX  XX  X
+
+
+X  XX  XX  MMMMMM  XX  XX  X
+X  XX  XXX        XXX  XX  X
+XX  XX   XXXXXXXXXX   XX  XX
+ XX  XXX            XX   XXX
+  ##   #############   ##
+    ##               ### 
+      ################
+
+
+

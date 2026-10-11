@@ -1,0 +1,59 @@
+backgroundColor=#476066
+textColor=#EADAA0
+paddleColor=#EADAA0
+
+unbreakableColor=#838469
+unbreakableStrokeColor=#838469
+
+brickColor=#AB5852
+brickStrokeColor=#AB5852
+
+magicColor=#D69E49
+magicStrokeColor=#D69E49
+
+ballColor=#EADAA0
+spinColor=#EADAA0
+secondBallColor=#EADAA0
+secondBallSpinColor=#EADAA0
+
+// 2nd
+
+backgroundColor=#1D0E2C
+textColor=#5E87F5
+paddleColor=#5E87F5
+brickColor=#3D4B91
+brickStrokeColor=#3D4B91
+unbreakableColor=#2D2C5E
+unbreakableStrokeColor=#2D2C5E
+magicColor=#4E69C3
+magicStrokeColor=#4E69C3
+ballColor=#5E87F5
+spinColor=#5E87F5
+secondBallColor=#5E87F5
+secondBallSpinColor=#5E87F5
+
+
+ballRadius=14.0
+
+brickWidth=102
+brickHeight=102
+ballX=10.0
+ballY=10.0
+
+ballVx=-260
+ballVy=-380
+title="P H Y S I C A L"
+
+
+---
+
+U XXX X X X X  XX U
+U XXX XXX  X   X  U
+U X   X X  X  XX  U
+                  
+U XXX XXX  X  X   U
+U  X  X   XXX X   U
+U XXX XXX X X XXX U
+
+
+

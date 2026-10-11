@@ -1,0 +1,60 @@
+brickWidth=40
+brickHeight=20
+brickPadding=12
+brickOffsetTop=55
+ballX=900
+ballY=720
+ballVx=240
+ballVy=-380
+ballRadius=16
+powerUpDuration=45
+magnetStrength=700
+magnetRange=740
+paddleBoost=450
+magnet=true
+enableReverseGravity=false
+enableMagnet=false
+audioRoom=space
+audioRoomDry=0.40
+title="THE GREAT EYE"
+
+backgroundColor=#071521
+paddleColor=#FAF0E6
+brickColor=#B9B4C7
+brickStrokeColor=#B9B4C7
+unbreakableColor=#5C5470
+unbreakableStrokeColor=#5C5470
+magicColor=#FAF0E6
+magicStrokeColor=#FAF0E6
+ballColor=#FAF0E6
+spinColor=#FAF0E6
+secondBallColor=#FAF0E6
+textColor=#FAF0E6
+secondBallSpinColor=#FAF0E6
+---
+
+UU  UU  UUU   UUU  UU  UU
+U#######################U
+M#                     #M
+U#  #################  #U
+M#  #               #  #M
+U#  #  ###########  #  #U
+M#  #  #         #  #  #M
+U#  #  #  #####  #  #  #U
+M#  #  #  #MMM#  #  #  #M
+U#  #  #  #M M#  #  #  #U
+M#  #  #  #MMM#  #  #  #M
+U#  #  #  #####  #  #  #U
+M#  #  #         #  #  #M
+U#  #  ###########  #  #U
+M#  #               #  #M
+U#  #################  #U
+M#                     #M
+U#######################U
+UMUUUUUUUUU   UUUUUUUUUMU
+
+
+
+
+
+

@@ -1,0 +1,58 @@
+
+brickWidth=30
+brickHeight=30
+brickPadding=30
+ballRadius=10.0
+
+
+backgroundColor=#1f1a3a
+paddleColor=#4b3879
+brickColor=#4b3879
+brickStrokeColor=#ffcc00
+ballColor=#00ffff
+textColor=#00ffff
+spinColor=#00ffff
+secondBallColor=#00ffff
+secondBallSpinColor=#00ffff
+magicStrokeColor=#ffd700
+unbreakableColor=#ff3366
+unbreakableStrokeColor=#ff3366
+
+backgroundColor=#1B1425
+textColor=#FBDD74
+paddleColor=#FBDD74
+brickColor=#67568C
+brickStrokeColor=#67568C
+
+magicColor=#fbdd74
+magicStrokeColor=#fbdd74
+
+unbreakableColor=#FF6E6C
+unbreakableStrokeColor=#FF6E6C
+
+ballColor=#FBDD74
+spinColor=#FBDD74
+secondBallColor=#FBDD74
+secondBallSpinColor=#FBDD74
+
+audioRoom=bigroom
+audioRoomDry=0.30
+title="FROM THE RIGHT"
+---
+U # U # M # M
+ U # U # M # M
+  U # U # M # M
+   U # U # M # M
+    U # U # M # M
+     U # U # M # M
+      U # U # M # M
+       U # U # M # M
+        U # U # M # M
+         U # U # M # M
+          U # U # M # M
+           U # U # M # M
+
+
+
+
+

@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+project_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+"$project_dir/build"
+omarchy plugin validate "$project_dir"
+bash -n "$project_dir/build" "$project_dir/install" "$project_dir/check" "$project_dir/physical-window"
+g++ -O2 -std=c++17 -fPIC "$project_dir/tests/renderer_test.cpp" -I"$project_dir/bin" $(pkg-config --cflags --libs Qt6Quick Qt6Qml Qt6Gui) -o "$project_dir/bin/renderer-test"
+QT_QPA_PLATFORM=offscreen "$project_dir/bin/renderer-test"
+cd "$project_dir/engine"
+go test -buildvcs=false ./...
+go vet -buildvcs=false ./...
+python3 "$project_dir/tests/engine_test.py"
+python3 "$project_dir/tests/qml_smoke.py"

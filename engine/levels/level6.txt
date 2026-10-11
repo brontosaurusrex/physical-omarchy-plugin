@@ -1,0 +1,38 @@
+
+brickWidth=30
+brickHeight=60
+brickPadding=30
+ballRadius=20.0
+
+backgroundColor=#9F7BBD
+textColor=#FCEDF2
+paddleColor=#FCEDF2
+brickColor=#FFA0C5
+brickStrokeColor=#FFA0C5
+unbreakableColor=#FFD1D4
+unbreakableStrokeColor=#FFD1D4
+magicColor=#FCEDF2
+magicStrokeColor=#FCEDF2
+ballColor=#FCEDF2
+spinColor=#FCEDF2
+secondBallColor=#FCEDF2
+secondBallSpinColor=#FCEDF2
+
+audioRoom=smallhall
+audioRoomDry=0.95
+title="HEART"
+---
+
+ MMMMMMMM  MMMMMMMM
+##       ##       ##
+#                  #
+#        UU        #
+##       UU       ##
+ ##              ##
+   ##          ##
+     ###    ###
+       #####
+
+
+
+

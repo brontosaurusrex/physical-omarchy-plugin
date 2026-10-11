@@ -1,0 +1,45 @@
+gravity=300
+
+//maxSpeed=800
+//paddleBoost=1300
+//paddleWidth=180
+brickBoost=300
+//ballRadius=18
+
+#1f1a3a, #4b3879, #ff3366, #00ffff, #ffcc00
+
+backgroundColor=#1f1a3a
+paddleColor=#4b3879
+brickColor=#4b3879
+brickStrokeColor=#ffcc00
+ballColor=#00ffff
+textColor=#00ffff
+spinColor=#00ffff
+
+secondBallColor=#00ffff
+secondBallSpinColor=#00ffff
+
+magicStrokeColor=#ffd700
+unbreakableColor=#ff3366
+unbreakableStrokeColor=#ff3366
+
+
+brickWidth=120
+brickHeight=120
+ballX=150.0
+ballY=20.0
+ballVx=30.0
+ballVy=-30.0
+audioRoom=space
+audioRoomDry=0.75
+title="INVADER"
+---
+  X      X
+   X    X
+  XXXXXXXX
+ XXUXXXXUXX
+XXXXXXXXXXXX
+X XXXXXXXX X
+X X      X X
+   XX  XX
+

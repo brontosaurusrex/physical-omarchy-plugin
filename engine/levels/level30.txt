@@ -1,0 +1,73 @@
+brickWidth=24
+brickHeight=48
+brickPadding=20
+brickOffsetTop=0
+ballX=900
+ballY=720
+ballVx=250
+ballVy=-380
+ballRadius=7
+paddleBoost=1150
+paddleWidth=170
+title="4K"
+
+# moon 
+backgroundColor=#071521
+paddleColor=#FAF0E6
+brickColor=#B9B4C7
+brickStrokeColor=#B9B4C7
+unbreakableColor=#5C5470
+unbreakableStrokeColor=#5C5470
+magicColor=#FAF0E6
+magicStrokeColor=#FAF0E6
+ballColor=#FAF0E6
+spinColor=#FAF0E6
+secondBallColor=#FAF0E6
+textColor=#FAF0E6
+secondBallSpinColor=#FAF0E6
+
+# new
+
+backgroundColor=#212328
+textColor=#C23838
+paddleColor=#C23838
+brickColor=#5C646C
+brickStrokeColor=#5C646C
+unbreakableColor=#672F34
+unbreakableStrokeColor=#672F34
+magicColor=#C23838
+magicStrokeColor=#C23838
+ballColor=#C23838
+spinColor=#C23838
+secondBallColor=#C23838
+secondBallSpinColor=#C23838
+
+audioRoom=space
+audioRoomDry=0.75
+
+magnetStrength=1270
+magnetRange=180
+paddleBoost=450
+magnet=true
+enableMagnet=false
+---
+
+
+                          XXXXXXXXXXXXXX               XXXXXXXXXX 
+                        XXXXXXXXXXXXXXXXXX      XXXXXXXXXXXXXXXXXX
+                      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+                     XXXXXXXXXXXXXXXXXXXXXXXX    XXXXXXXXXXXXXX   
+                    XXXXXXXXXXXXXXXXXXXXXXXXXX  XXXXXXXXXXXXX     
+                   XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX       
+                   XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX          
+                   XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX           
+                  XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                
+               XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                   
+            XXXXXX   XXXXXXXXXXXXXXXXXXXXXXXX                     
+          XXXXXXXX   XXXXXXXXXXXXXXXXXXXXXXX                      
+       XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                        
+     XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                          
+    XXXXXXXXXXXXXXXXXXXXXXX                                       
+   XXXXXXXXXXXXXXXXXX X                                           
+   XXXXXXXXXXX  X                                                 
+

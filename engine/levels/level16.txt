@@ -1,0 +1,56 @@
+gravity=700
+//restitution=0.8
+frictionCoeff=0.1
+maxSpin=300
+maxSpeed=1350
+//paddleBoost=1300
+//paddleWidth=180
+brickBoost=300
+ballRadius=18
+
+#1f1a3a, #4b3879, #ff3366, #00ffff, #ffcc00
+
+backgroundColor=#1f1a3a
+paddleColor=#4b3879
+brickColor=#ff3366
+ballColor=#00ffff
+textColor=#00ffff
+spinColor=#00ffff
+unbreakableColor=#1f1a3a
+secondBallColor=#00ffff
+secondBallSpinColor=#00ffff
+
+magicStrokeColor=#ffd700
+unbreakableStrokeColor=#e76f51
+brickStrokeColor=#4c956c
+brickWidth=50
+brickHeight=50
+ballX=150.0
+ballY=20.0
+ballVx=30.0
+ballVy=-30.0
+audioRoom=cave
+audioRoomDry=0.80
+title="HOW FAST?"
+---
+M    M MMMMMM MMMMM M     M
+"m  m" #      #   "# "m m"
+ #  #  #mmmmm #mmmm"  "#"
+ "mm"  #      #   "m   #
+  ##   #mmmmm #    "   #
+  XX   XXXXXX X    X   X
+
+
+XXXXXX   XX    XXXX XXXXXXX 
+#        ##   #"   "   #
+#mmmmm  #  #  "#mmm    #
+#       #mm#      "#   #
+X      X    X "XXXX"   X
+X     X      X  XX     X
+
+
+
+
+
+
+

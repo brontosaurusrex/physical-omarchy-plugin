@@ -1,0 +1,40 @@
+brickPadding=15.0
+brickWidth=26
+brickHeight=36
+backgroundColor=#2c6e49
+paddleColor=#ffc9b9
+brickColor=#4c956c
+ballColor=#d68c45
+textColor=#ffc9b9
+spinColor=#d68c45
+unbreakableColor=#2c6e49
+secondBallColor=#d68c45
+secondBallSpinColor=#d68c45
+
+magicStrokeColor=#ffd700
+unbreakableStrokeColor=#e76f51
+brickStrokeColor=#4c956c
+---
+        _,met$$$$$gg.      
+     ,g$$$$$$$$$$$$$$$M.   
+   ,g$$M""       """M$$.". 
+  ,$$M'              `$$$. 
+',$$M       ,ggs.     `$$b:
+`d$$'     ,$M"'   .    $$$ 
+ $$M      d$'     ,    $$M 
+ $$:      $$.   -    ,d$$' 
+ $$;      M$b._   _,d$M'   
+ M$$.    `.`"M$$$$M"'      
+ `$$b      "-.__           
+  `M$$b                    
+   `M$$.                   
+     `$$b.                 
+       `M$$b.              
+         `"M$b._           
+             `""""  
+
+
+
+
+
+       

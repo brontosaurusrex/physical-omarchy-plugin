@@ -1,0 +1,49 @@
+# Level 27: Ceiling Garden
+# Negative gravity pulls the ball upward into a hanging canopy.
+maxSpeed=1150
+brickWidth=35
+brickHeight=35
+brickPadding=10
+brickOffsetTop=35
+paddleWidth=250
+ballX=900
+ballY=700
+ballVx=330
+ballVy=-520
+ballRadius=10
+powerUpDuration=6
+
+backgroundColor=#12151c
+paddleColor=#2e1440
+brickColor=#4d586b
+brickStrokeColor=#4d586b
+ballColor=#0ebdaf
+textColor=#0ebdaf
+spinColor=#0ebdaf
+secondBallColor=#0ebdaf
+secondBallSpinColor=#0ebdaf
+magicColor=#503c81
+magicStrokeColor=#503c81
+//unbreakableStrokeColor=#e76f51
+audioRoom=cave
+audioRoomDry=0.10
+title="STALACTITE"
+---
+
+MMM  MMM=#MM .*M% M MM- M MMMMMMMMMM M MM=M M MM MM.M=.M
+MM  #+ M*  M% MMMMMMMMM::MMMMMM + MMM.+MMM*MMM%MMM% MM=M
+MMMM  MMMMM.  M.MM  MMMM.   MM#*M.MMM#*%M. %MMMMMMMMMM.M
+MM #M-MM M  .MM M: MM M M  * M.* -MM.  MMM  M- MMM M.MMM
+MMM MMMMMMM    MM  M%   M%  MMM  .MM   MMMM MM +MM.M:MMM
+ M#M.  %MM M .=MM M MM    :MMMM M %M  .M  * M...MM   MMM
+. MM MM . MMM.MM  M.M+   M  M*M  *MM   *M  MM  . :M.MMM.
+M M   M   MMM  M .  M    M :MMM  MMM   MM   M    MMM MM 
+        . %.M .M  M         %M    M    MM         MM:M  
+        M%.#M M           M M.        . M         %M    
+         .MMM             MMM           =         MM    
+        %- M                                       .    
+           M                                      M     
+          MM                                            
+          M                                       M     
+                                                        
+                                                        

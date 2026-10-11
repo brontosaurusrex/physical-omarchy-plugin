@@ -1,0 +1,79 @@
+# Spiral corridor with one side entrance
+backgroundColor=#0d0f12
+paddleColor=#d8dbe0
+brickColor=#9ca1a8
+brickStrokeColor=#c9cdd2
+unbreakableColor=#292d33
+unbreakableStrokeColor=#666c75
+magicColor=#f1faee
+magicStrokeColor=#ffffff
+ballColor=#ffffff
+spinColor=#ffffff
+secondBallColor=#c7cbd1
+textColor=#e7e9ec
+secondBallSpinColor=#8d939b
+
+gravity=200.0
+restitution=0.99
+frictionCoeff=0.0001
+maxSpeed=1000
+paddleBoost=1800
+brickBoost=0
+
+stuckSpeedThreshold=350
+stuckDuration=0.9
+tiltUpSpeed=-2600
+tiltSideMin=280
+tiltSideMax=1420
+
+ballX=120
+ballY=60
+ballVx=5
+ballVy=100
+
+brickWidth=50
+brickHeight=25
+brickPadding=4
+brickOffsetTop=50
+brickRadius=3
+paddleWidth=240
+
+magicChance=0
+unbreakableChance=0
+
+enableLowGravity=false
+enablePassThrough=false
+enableNuke=false
+enableReverseGravity=false
+enableDualBalls=false
+enableBlackHole=false
+enableMagnet=false
+enableInfluencer=false
+enableZapper=false
+magnet=false
+zapper=false
+audioRoom=cave
+audioRoomDry=0.67
+title="SHELL"
+---
+UUUUUUUUU UUUUUUUUU
+U                 U
+U                 U
+U               U U
+U  U            U U
+U  U            U U
+U  U UUUUUUUUUU U U
+U  U U        U U U
+U  U U        U U U
+U  U U U  #   U U U
+U  U U U      U U U
+U  U U U      U U U
+U  U U UUUUUUUU U U
+U  U U          U U
+U  U U          U U
+U  U UUUUUUUUUUUU U
+U  U      #       U
+U  U      #       U
+   UUUUUUUUUUUUUUUU
+   UUUUUUUUUUUUUUUU
+  

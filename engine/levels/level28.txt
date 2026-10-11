@@ -1,0 +1,37 @@
+backgroundColor=#1f1a3a
+paddleColor=#4b3879
+brickColor=#4b3879
+brickStrokeColor=#ffcc00
+ballColor=#00ffff
+textColor=#00ffff
+spinColor=#00ffff
+secondBallColor=#00ffff
+secondBallSpinColor=#00ffff
+magicStrokeColor=#ffd700
+unbreakableColor=#ff3366
+unbreakableStrokeColor=#ff3366
+
+brickWidth=450
+brickHeight=450
+brickPadding=255.0
+ballX=150.0
+ballY=20.0
+ballVx=30.0
+ballVy=-30.0
+gravity=505
+audioRoom=smallhall
+audioRoomDry=0.75
+
+enablePassThrough = false
+title="CASTLE"
+---
+
+######   ######
+UUUU # U # UUUU
+  MM MM MM MM
+ #MM MM MM MM
+U # UUUUUUU # U  
+U #### U #### U
+UUU  # U #  UUU
+
+

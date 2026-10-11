@@ -1,0 +1,72 @@
+# Level 26: Heavy Rain
+# Tall separated drops, strong gravity, and a fast paddle produce a vertical chase.
+gravity=450
+restitution=0.86
+//frictionCoeff=0.15
+//maxSpin=55
+paddleBoost=1450
+brickBoost=350
+//maxSpeed=1030
+maxSpeed=950
+brickWidth=34
+brickHeight=38
+brickPadding=18
+brickOffsetTop=35
+paddleWidth=250
+ballX=900
+ballY=23
+ballVx=200
+ballVy=2
+ballRadius=11
+powerUpDuration=9
+enableBlackHole=true
+enablePassThrough=true
+enableLowGravity=true
+enableBigPaddle=true
+enableZapper=true
+debrisSizeScale=1.75
+backgroundColor=#081c15
+paddleColor=#d8f3dc
+brickColor=#52b788
+brickStrokeColor=#95d5b2
+unbreakableColor=#1b4332
+unbreakableStrokeColor=#74c69d
+magicColor=#99dd88
+magicStrokeColor=#99dd88
+ballColor=#ffffff
+spinColor=#ffffff
+secondBallColor=#90e0ef
+secondBallSpinColor=#90e0ef
+textColor=#d8f3dc
+audioRoom=matrix
+audioRoomDry=0.60
+title="MEGABYTE"
+---
+
+ ..   M  .  ..         M * .   M * :. .  ..- . -* .
+. -. .*.*-.=.= . -:.. .# # - .:  * -- -  : = -:* .=
+-**: :=.*- : = ..- -. .# #....-M *--MMM .==== -*. =
+: .: : . -.---   : - :.*.*    = **.=* * .  -M.--*..
+=..- -=.##:  .   ..- . :::    *  M M# #..==* =: .. 
+. =- -** *: -.   ........     =  M.-*..:.- M:. -*.:
+ = M-=   *-*.M   : -... .    .-M = .* * :MM=   *. =
+ - = -M.*-M. M   = M :.. .   . * = .M.M.-  .   * .=
+ - ***... M *=   = M  .. .   .-  M..=== - -.   *.*-
+ : * M:  .-==.   ==M...: :   .=* =  *.* ...    * ..
+ . MMM-.:.:-..   M M ..: :   .   -  *.M  ...   * *-
+  :.  - .:: -.  .*.M:.:: :   M*.=:  =.M. . .   *...
+.- ...:=.-:::   . :=: :: :   = * :  :- . : :   *.#M
+  :: ..  :...   .*.M:::...   ==.::   ... . .   *  =
+ : :..:==:. .   :* *          -MM:   : : :::   #::=
+ - -  .  -...   : .*   :::    - .M  .  :.: :   * :.
+ : :  -*.-: :   :MM-...=.=    -* *  : - := :   * * 
+ :::  = *-- -       . .# #    .*.*  = =.-  :   *.* 
+      *..-= =       : :* *    :  -  M M -.*-   * . 
+      =  -= =       - -MMM    : *=  M M :* =   M.. 
+ ...  :==:- -       : :M M    .= -  - -  M.M   :-- 
+ . .  === ---       ...*.*     ---  ...  M.M   =   
+ ...  M #MM M          M M    ...   : :  - -   *.* 
+      -. -- -          :::          . .  ...   = = 
+
+
+

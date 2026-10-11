@@ -1,0 +1,47 @@
+enablePassThrough=false
+enableBlackHole=true
+ballX=1400.0
+ballY=100.0
+ballVx=1.0
+ballVy=-1.0
+brickWidth=15
+brickHeight=30
+brickPadding=10
+
+backgroundColor=#0d0f12
+paddleColor=#d8dbe0
+brickColor=#9ca1a8
+brickStrokeColor=#c9cdd2
+unbreakableColor=#292d33
+unbreakableStrokeColor=#666c75
+magicColor=#f1faee
+magicStrokeColor=#ffffff
+ballColor=#ffffff
+spinColor=#ffffff
+secondBallColor=#c7cbd1
+textColor=#e7e9ec
+secondBallSpinColor=#8d939b
+audioRoom=space
+audioRoomDry=0.50
+title="SLAY"
+---
+                  %MM%M                  
+               %%%M% MMM                 
+            %%%%#%%%%%M                  
+           %%#%##M%%%%                   
+         M%MM###%M%#M                    
+            #%%%%%%MM             M      
+              M%%M#%MM         MM%###%%  
+ MM           M M%%%%%%       %%% %M%##  
+ ##%              %#%%%M   ##%           
+  % M%%%%%M     ###%##%##M#M             
+            %M%####%#####%%              
+                 %%%%%#%#%               
+                  M###%%%     M          
+              MM           M             
+                     M M
+
+
+
+
+                     

@@ -1,0 +1,61 @@
+enablePassThrough=false
+enableBlackHole=true
+ballX=1700.0
+ballY=10.0
+ballVx=1.0
+ballVy=-1.0
+brickWidth=30
+brickHeight=40
+brickPadding=10
+
+ballRadius=13.0
+
+stuckSpeedThreshold=150
+stuckDuration=3.9
+tiltUpSpeed=-2600
+tiltSideMin=280
+tiltSideMax=420
+//enableZapper=true
+//powerUpDuration=25
+
+gravity=200
+brickBoost=6
+maxSpeed=900
+frictionCoeff=0.25
+
+backgroundColor=#170C79
+paddleColor=#8acbd0
+brickColor=#56b6c6
+brickStrokeColor=#56b6c6
+unbreakableColor=#170c79
+unbreakableStrokeColor=#efe3ca
+magicColor=#efe3ca
+magicStrokeColor=#efe3ca
+ballColor=#efe3ca
+spinColor=#efe3ca
+secondBallColor=#efe3ca
+textColor=#efe3ca
+secondBallSpinColor=#efe3ca
+
+audioRoom=underwater
+audioRoomDry=0.0
+title="UNDER"
+---
+
+                                                                                           
+X                  XX     ..X-                     
+ #X                 XXX-X %%XX#XX.                 
+  XX              .--XX%%X%X#XXXXXXX               
+  #XX          .--X#XXXX-.XXXXXXXX.X               
+   XXX   XXX----XXXXXXXXXXX%XX-#-XX.               
+  %XXX#%#XXXXXXXXXXXXXXXXXX-XX#XXXX                
+  %%     X#%#XXXX##XXXXXXXXXXXX-X-                 
+XX          ######%#XXXXXXXXXXXXX                  
+            X# -XXXXXXXXXXXXXXXXX                  
+                -X ..XXX----    XXX                
+              %X                  -#               
+             X                     .               
+
+
+
+                                                   

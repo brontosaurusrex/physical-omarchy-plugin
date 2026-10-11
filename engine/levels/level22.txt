@@ -1,0 +1,48 @@
+# Level 22: Pinball Garden
+# Sparse pegs and targets; low gravity and lively rebounds.
+gravity=400
+maxSpeed=1150
+brickWidth=30
+brickHeight=70
+brickPadding=30
+brickOffsetTop=5
+paddleWidth=190
+ballX=900
+ballY=760
+ballVx=360
+ballVy=-420
+ballRadius=10
+powerUpDuration=14
+enableZapper=true
+backgroundColor=#071521
+paddleColor=#FAF0E6
+brickColor=#B9B4C7
+brickStrokeColor=#B9B4C7
+unbreakableColor=#5C5470
+unbreakableStrokeColor=#5C5470
+magicColor=#FAF0E6
+magicStrokeColor=#FAF0E6
+ballColor=#FAF0E6
+spinColor=#FAF0E6
+secondBallColor=#FAF0E6
+textColor=#FAF0E6
+secondBallSpinColor=#FAF0E6
+audioRoom=space
+audioRoomDry=0.5
+title="TO THE MOON"
+---
+                                                  
+        XXX                                       
+     XXXX         X                               
+    XXXX         :=    %*                         
+   XXXXX    XX=                                   
+  XXXXX:            XX   -X#     XX               
+  XXXXX% =    XX                                  
+  XXXXXX =               X           #*   .       
+   XXXXXX   **     X              *            X  
+   #XX#XXX% :          X                   #X     
+     XXXXXXXX+      XX#                           
+       XX%XXXXXXX=XX%                             
+         -XXXXX%X                                
+                                                  
+                                                                                  
