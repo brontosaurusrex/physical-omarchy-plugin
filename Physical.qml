@@ -29,8 +29,18 @@ Item {
         for (var i = 0; i < screens.length; ++i) if (monitor && screens[i].name === monitor.name) return screens[i];
         return screens.length ? screens[0] : null;
     }
-    readonly property int defaultWindowWidth: Math.min(1280, Math.floor((panel.screen ? panel.screen.width : 1280) * 0.9))
-    readonly property int defaultWindowHeight: Math.min(760, Math.floor((panel.screen ? panel.screen.height : 760) * 0.9))
+    readonly property real gameAspectRatio: canvas.gameWidth / canvas.gameHeight
+    function initialWindowSize(screenWidth, screenHeight) {
+        // Reserve the same two-pixel frame on all sides, then fit the playfield.
+        var inset = 4;
+        var maxWidth = Math.min(1280, Math.floor(screenWidth * 0.9));
+        var maxHeight = Math.floor(screenHeight * 0.9);
+        var contentHeight = Math.max(1, Math.floor(Math.min((maxWidth - inset) / gameAspectRatio, maxHeight - inset)));
+        return Qt.size(Math.floor(contentHeight * gameAspectRatio) + inset, contentHeight + inset);
+    }
+    readonly property size defaultWindowSize: initialWindowSize(panel.screen ? panel.screen.width : 1280, panel.screen ? panel.screen.height : 760)
+    readonly property int defaultWindowWidth: defaultWindowSize.width
+    readonly property int defaultWindowHeight: defaultWindowSize.height
     readonly property color hudColor: state.palette && state.palette.length > 4 ? state.palette[4] : Color.foreground
     function focusGame() { Qt.callLater(function() { gameInput.forceActiveFocus(); }); }
     function toggleMenu() {

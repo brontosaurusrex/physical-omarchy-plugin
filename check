@@ -4,7 +4,7 @@ project_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 "$project_dir/build"
 omarchy plugin validate "$project_dir"
 bash -n "$project_dir/build" "$project_dir/install" "$project_dir/check" "$project_dir/physical-window"
-g++ -O2 -std=c++17 -fPIC "$project_dir/tests/renderer_test.cpp" "$project_dir/bin/pointerlock.o" "$project_dir/bin/protocols/"*.o -I"$project_dir/bin" $(pkg-config --cflags --libs Qt6Quick Qt6Qml Qt6Gui wayland-client) -o "$project_dir/bin/renderer-test"
+g++ -O2 -std=c++17 -fPIC "$project_dir/tests/renderer_test.cpp" "$project_dir/bin/pointerlock.o" "$project_dir/bin/protocols/"*.o -I"$project_dir/bin" $(pkg-config --cflags --libs Qt6Quick Qt6Qml Qt6Gui Qt6Multimedia wayland-client) -o "$project_dir/bin/renderer-test"
 QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME= "$project_dir/bin/renderer-test"
 cd "$project_dir/engine"
 go test -buildvcs=false ./...

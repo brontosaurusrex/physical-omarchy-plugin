@@ -1,5 +1,5 @@
 import QtQuick
-import QtMultimedia
+import "native" as Native
 
 Item {
     id: root
@@ -7,6 +7,7 @@ Item {
     property bool enabled: true
     property real volume: 0.25
     property int variation: 0
+    Native.AudioMixer { id: mixer; directory: Qt.resolvedUrl("sounds/"); volume: root.volume }
     readonly property var clips: ["wall", "paddle", "brick0", "brick1", "brick2", "brick3", "magic0", "magic1", "magic2", "magic3", "tone120", "tone240", "tone360", "tone480", "tone720", "tone960", "tone1440"]
 
     function play(events) {
@@ -26,11 +27,10 @@ Item {
             if (index >= 0) bank.itemAt(index).playSound();
         }
     }
-    function stop() { for (var i = 0; i < bank.count; ++i) { var clip = bank.itemAt(i); if (clip) clip.stop(); } }
+    function stop() { mixer.stop(); }
     onEnabledChanged: if (!enabled) stop()
 
-    // Sources never change during playback. Two preloaded voices per clip keep
-    // brick activity from cancelling or reloading the collision sounds.
+    // Two voices per clip share one persistent native audio output.
     Repeater {
         id: bank
         model: root.clips
@@ -38,7 +38,19 @@ Item {
             id: sampleGroup
             required property string modelData
             property int cursor: 0
-            function playSound() { voices.itemAt(cursor++ % voices.count).playSound(); }
+            function playSound() {
+                // Use a free voice instead of stopping an active audio stream
+                // for every hit in a dense brick/zapper burst.
+                for (var i = 0; i < voices.count; ++i) {
+                    var index = (cursor + i) % voices.count;
+                    var voice = voices.itemAt(index);
+                    if (voice && !voice.playing && !voice.pending) {
+                        cursor = (index + 1) % voices.count;
+                        voice.playSound();
+                        return;
+                    }
+                }
+            }
             function stop() { for (var i = 0; i < voices.count; ++i) voices.itemAt(i).stop(); }
             Repeater {
                 id: voices
@@ -47,26 +59,11 @@ Item {
                     id: voice
                     required property int index
                     objectName: "sound-" + sampleGroup.modelData + "-" + index
-                    readonly property bool ready: effect.status === SoundEffect.Ready
-                    readonly property bool playing: effect.playing
-                    property bool pending: false
-                    function playSound() {
-                        effect.stop();
-                        pending = effect.status !== SoundEffect.Ready;
-                        if (!pending) effect.play();
-                    }
-                    function stop() { pending = false; effect.stop(); }
-                    SoundEffect {
-                        id: effect
-                        source: Qt.resolvedUrl("sounds/" + sampleGroup.modelData + ".wav")
-                        volume: 0.18 * root.volume
-                        onStatusChanged: {
-                            if (status === SoundEffect.Ready && voice.pending) {
-                                voice.pending = false;
-                                if (root.enabled && root.volume > 0) play();
-                            }
-                        }
-                    }
+                    readonly property bool ready: { mixer.revision; return mixer.ready(sampleGroup.modelData); }
+                    readonly property bool playing: { mixer.revision; return mixer.playing(sampleGroup.modelData, index); }
+                    readonly property bool pending: false
+                    function playSound() { mixer.play(sampleGroup.modelData, index); }
+                    function stop() { mixer.stop(); }
                 }
             }
         }

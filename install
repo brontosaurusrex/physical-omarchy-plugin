@@ -38,8 +38,8 @@ for tool in g++ pkg-config go wayland-scanner; do
     exit 1
   fi
 done
-if [[ ! -x /usr/lib/qt6/moc ]] || ! pkg-config --exists Qt6Qml Qt6Quick Qt6Gui; then
-  echo "Qt build tools are still unavailable; install qt6-base and qt6-declarative, then rerun ./install." >&2
+if [[ ! -x /usr/lib/qt6/moc ]] || ! pkg-config --exists Qt6Qml Qt6Quick Qt6Gui Qt6Multimedia; then
+  echo "Qt build tools are still unavailable; install qt6-base, qt6-declarative and qt6-multimedia, then rerun ./install." >&2
   exit 1
 fi
 

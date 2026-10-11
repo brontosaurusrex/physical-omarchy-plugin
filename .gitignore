@@ -10,3 +10,5 @@ __pycache__/
 /bin/pointerlock.moc
 /bin/pointerlock.o
 /bin/protocols/
+
+/bin/audiomixer.moc

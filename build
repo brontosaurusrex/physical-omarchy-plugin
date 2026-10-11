@@ -12,9 +12,10 @@ for protocol in pointer-constraints relative-pointer; do
   cc -O3 -fPIC -c "$protocol_dir/$protocol.c" $(pkg-config --cflags wayland-client) -o "$protocol_dir/$protocol.o"
 done
 /usr/lib/qt6/moc $(pkg-config --cflags Qt6Qml) "$project_dir/native/renderer.cpp" -o "$project_dir/bin/renderer.moc"
+/usr/lib/qt6/moc $(pkg-config --cflags Qt6Qml Qt6Multimedia) "$project_dir/native/audiomixer.h" -o "$project_dir/bin/audiomixer.moc"
 /usr/lib/qt6/moc $(pkg-config --cflags Qt6Qml) "$project_dir/native/pointerlock.h" -o "$project_dir/bin/pointerlock.moc"
 g++ -O3 -std=c++17 -fPIC -c "$project_dir/native/pointerlock.cpp" -I"$project_dir/bin" -I"$protocol_dir" $(pkg-config --cflags Qt6Quick wayland-client) -o "$project_dir/bin/pointerlock.o"
-g++ -O3 -std=c++17 -fPIC -shared "$project_dir/native/renderer.cpp" "$project_dir/bin/pointerlock.o" "$protocol_dir/"*.o -I"$project_dir/bin" $(pkg-config --cflags --libs Qt6Quick Qt6Qml Qt6Gui wayland-client) -o "$project_dir/native/libphysicalrenderer.so.new"
+g++ -O3 -std=c++17 -fPIC -shared "$project_dir/native/renderer.cpp" "$project_dir/bin/pointerlock.o" "$protocol_dir/"*.o -I"$project_dir/bin" $(pkg-config --cflags --libs Qt6Quick Qt6Qml Qt6Gui Qt6Multimedia wayland-client) -o "$project_dir/native/libphysicalrenderer.so.new"
 mv -f "$project_dir/native/libphysicalrenderer.so.new" "$project_dir/native/libphysicalrenderer.so"
 printf 'plugin physicalrenderer %s/native\n' "$project_dir" > "$project_dir/native/qmldir"
 cd "$project_dir/engine"

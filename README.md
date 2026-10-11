@@ -8,8 +8,11 @@ The controls follow Omarchy's active colors, fonts, spacing, and window rounding
 The playfield, effects, replay, and SVG exports retain Physical's original
 per-level palettes and game font. Pause, fullscreen, and menu buttons sit above
 the playfield; settings and keyboard help live in the menu. Audio defaults to 25%
-and saves your preference between sessions. The initial window is limited to 90%
-of the display width and height.
+and saves your preference between sessions. A single native audio stream mixes
+preloaded collision sounds, avoiding stream restarts during dense effect bursts.
+The initial window is limited to 90% of the display width and height, keeps the
+game aspect ratio, and opens centered horizontally directly beneath the top bar.
+Qt uses the monitor scale for high-DPI rendering; the 1280-pixel window cap is in logical pixels.
 
 ## Install
 
@@ -112,9 +115,16 @@ For a real display FPS measurement, run
 `PHYSICAL_TEST_WAYLAND=1 python3 tests/qml_smoke.py`; this opens a temporary test
 window for a few seconds and prints its painted frame rate.
 
-`PHYSICAL_TEST_WAYLAND=1 python3 tests/performance.py` runs a 30-second gameplay
-benchmark with additional balls, magnets, and zapper effects, and reports average
-and minimum painted FPS.
+`PHYSICAL_TEST_WAYLAND=1 python3 tests/performance.py` runs a three-minute
+level 26 benchmark with additional balls, magnets, and zapper effects. It reports
+painted FPS every second, engine FPS, debris counts, replay history, and the
+average and minimum painted FPS. Completed runs and game overs restart the same
+level, and the test uses private progress. Initial loading and restart samples
+are included in the overall minimum, with transitions marked in the log.
+Set `PHYSICAL_PERF_STRESS=0` for normal gameplay, `PHYSICAL_PERF_LEVEL=1` to
+choose another level, or `PHYSICAL_PERF_SECONDS=300` for a five-minute run.
+`PHYSICAL_PERF_MUTE=1` isolates rendering and physics from audio playback. The
+benchmark stops and fails if Qt socket errors repeat.
 
 The UI test runs in a temporary folder using copies of the installed Omarchy
 components; it does not change the desktop theme or install the plugin.
