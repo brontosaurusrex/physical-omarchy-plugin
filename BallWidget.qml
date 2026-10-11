@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Window
 import qs.Commons
 import qs.Ui as Ui
 
@@ -14,9 +15,15 @@ Ui.BarWidget {
         hasVisualContent: true
         labelVisible: false
         fixedWidth: vertical ? barSize : Style.space(12) + scaledHorizontalMargin * 2
+        TextMetrics {
+            id: radioIconMetrics
+            text: "\uf0ac"
+            font.family: button.fontFamily
+            font.pixelSize: button.fontSize
+        }
         Rectangle {
             anchors.centerIn: parent
-            width: Style.space(12)
+            width: Math.max(1, Math.min(radioIconMetrics.tightBoundingRect.width, radioIconMetrics.tightBoundingRect.height) - 2 / Screen.devicePixelRatio)
             height: width
             radius: width / 2
             color: button.foreground

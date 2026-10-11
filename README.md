@@ -22,7 +22,7 @@ cd ~/source/physical-omarchy-plugin
 ```
 
 This installs a copy into `~/.config/omarchy/plugins/b.physical`, rescans plugins,
-and enables a solid white ball button on the left side of the Omarchy bar. Re-run `./install`
+and enables a solid white ball button in the center section of the Omarchy bar. Re-run `./install`
 after editing the source. After changing the compiled renderer, also run
 `omarchy restart shell` so Qt loads the new native module. Omarchy does not accept
 symlinked plugin packages.

@@ -25,6 +25,6 @@
     "description": "Play Physical",
     "category": "Games",
     "allowMultiple": false,
-    "defaultSection": "left"
+    "defaultSection": "center"
   }
 }
