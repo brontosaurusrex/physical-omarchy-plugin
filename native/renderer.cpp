@@ -261,6 +261,9 @@ public:
         setAntialiasing(true); setRenderTarget(QQuickPaintedItem::FramebufferObject); setOpaquePainting(true); setClip(true);
         slowLayer=new DebrisLayer(this); slowLayer->setZ(1);
         brickLayer=new PictureLayer(this); brickLayer->setZ(2);
+        // Bricks are cached: rasterize their rounded edges with high-quality
+        // antialiasing once per change, then composite the texture on the GPU.
+        brickLayer->setRenderTarget(QQuickPaintedItem::Image);
         fastLayer=new DebrisLayer(this); fastLayer->setZ(3);
         frontLayer=new PictureLayer(this); frontLayer->setZ(4);
     }
