@@ -40,12 +40,14 @@ ShellRoot {
             if (!game.engineReady || game.paintedFrames < 2) return;
             if (root.capturing) return;
             if (root.phase === 0) {
+                capture("physical-ready"); root.phase = 10;
+            } else if (root.phase === 10) {
                 game.shortcut(" "); game.shortcut("o"); root.phase = 1; root.initialFrames = game.paintedFrames; root.startTime = Date.now();
             } else if (root.phase === 1 && Date.now() - root.startTime > 3000) {
                 console.log("SMOKE rendered", game.paintedFrames - root.initialFrames, "frames", (game.paintedFrames - root.initialFrames) * 1000 / (Date.now() - root.startTime), "FPS");
                 if (Quickshell.env("PHYSICAL_TEST_WAYLAND")) {
                     var audio = findItem(game, "physicalAudio"), wall = findItem(game, "sound-wall-0"), paddle = findItem(game, "sound-paddle-0");
-                    if (!audio || !wall || !paddle || !wall.ready || !paddle.ready) { console.error("SMOKE contact clips not loaded"); Qt.exit(1); }
+                    if (!audio || !wall || !paddle || !wall.ready || !paddle.ready) { console.error("SMOKE contact clips not loaded"); Qt.exit(1); return; }
                     audio.play([{kind:"wall"}, {kind:"paddle"}]);
                     if (!(wall.playing || findItem(game, "sound-wall-1").playing) || !(paddle.playing || findItem(game, "sound-paddle-1").playing)) { console.error("SMOKE contact clips not playing"); Qt.exit(1); }
                 }
@@ -100,7 +102,7 @@ with tempfile.TemporaryDirectory(prefix="physical-qml-test-") as directory:
         env.pop("WAYLAND_DISPLAY", None)
     env.pop("HYPRLAND_INSTANCE_SIGNATURE", None)
     run = subprocess.run(["quickshell", "--no-color", "-p", str(folder / "shell.qml")], env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=25)
-    bad = [line for line in run.stdout.splitlines() if "WARN scene:" in line or "ERROR" in line]
+    bad = [line for line in run.stdout.splitlines() if "WARN scene:" in line or "ERROR" in line or "QSoundEffect: Error decoding" in line]
     if run.returncode or "SMOKE PASS:" not in run.stdout or bad:
         print(run.stdout)
         raise SystemExit(run.returncode or 1)

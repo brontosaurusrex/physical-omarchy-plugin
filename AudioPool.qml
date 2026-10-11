@@ -35,7 +35,7 @@ Item {
         id: bank
         model: root.clips
         delegate: Item {
-            id: clip
+            id: sampleGroup
             required property string modelData
             property int cursor: 0
             function playSound() { voices.itemAt(cursor++ % voices.count).playSound(); }
@@ -46,7 +46,7 @@ Item {
                 delegate: Item {
                     id: voice
                     required property int index
-                    objectName: "sound-" + clip.modelData + "-" + index
+                    objectName: "sound-" + sampleGroup.modelData + "-" + index
                     readonly property bool ready: effect.status === SoundEffect.Ready
                     readonly property bool playing: effect.playing
                     property bool pending: false
@@ -58,7 +58,7 @@ Item {
                     function stop() { pending = false; effect.stop(); }
                     SoundEffect {
                         id: effect
-                        source: Qt.resolvedUrl("sounds/" + clip.modelData + ".wav")
+                        source: Qt.resolvedUrl("sounds/" + sampleGroup.modelData + ".wav")
                         volume: 0.18 * root.volume
                         onStatusChanged: {
                             if (status === SoundEffect.Ready && voice.pending) {
