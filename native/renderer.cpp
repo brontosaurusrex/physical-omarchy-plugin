@@ -266,6 +266,9 @@ public:
         brickLayer->setRenderTarget(QQuickPaintedItem::Image);
         fastLayer=new DebrisLayer(this); fastLayer->setZ(3);
         frontLayer=new PictureLayer(this); frontLayer->setZ(4);
+        // Raster text and rounded moving objects with smooth coverage; particle
+        // geometry remains in separate GPU batches beneath this texture.
+        frontLayer->setRenderTarget(QQuickPaintedItem::Image);
     }
     qreal gameWidth()const{return gw;} qreal gameHeight()const{return gh;}
     int paintedFrames()const{return count.load();}

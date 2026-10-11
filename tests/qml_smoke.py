@@ -43,6 +43,12 @@ ShellRoot {
                 game.shortcut(" "); game.shortcut("o"); root.phase = 1; root.initialFrames = game.paintedFrames; root.startTime = Date.now();
             } else if (root.phase === 1 && Date.now() - root.startTime > 3000) {
                 console.log("SMOKE rendered", game.paintedFrames - root.initialFrames, "frames", (game.paintedFrames - root.initialFrames) * 1000 / (Date.now() - root.startTime), "FPS");
+                if (Quickshell.env("PHYSICAL_TEST_WAYLAND")) {
+                    var audio = findItem(game, "physicalAudio"), wall = findItem(game, "sound-wall-0"), paddle = findItem(game, "sound-paddle-0");
+                    if (!audio || !wall || !paddle || !wall.ready || !paddle.ready) { console.error("SMOKE contact clips not loaded"); Qt.exit(1); }
+                    audio.play([{kind:"wall"}, {kind:"paddle"}]);
+                    if (!(wall.playing || findItem(game, "sound-wall-1").playing) || !(paddle.playing || findItem(game, "sound-paddle-1").playing)) { console.error("SMOKE contact clips not playing"); Qt.exit(1); }
+                }
                 var volume = findItem(game.contentView, "audio-volume");
                 if (!volume || volume.width < 50 || volume.height < 12 || volume.value !== 0.5) { console.error("SMOKE unusable volume slider"); Qt.exit(1); }
                 volume.value = 0.25; volume.moved();

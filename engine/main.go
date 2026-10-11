@@ -2986,16 +2986,15 @@ func varyFreq(freq float64, amount float64) float64 {
 }
 
 func playWallHit() {
-	start := varyFreq(230, 0.10)
-	end := varyFreq(175, 0.10)
-	scheduleTone("triangle", start, end, audioRand(0.038, 0.055), audioRand(0.11, 0.16), 0)
+	if enableSounds {
+		nativeSound("wall")
+	}
 }
 
 func playPaddleHit() {
-	start := varyFreq(180, 0.08)
-	end := varyFreq(320, 0.08)
-	scheduleTone("triangle", start, end, audioRand(0.065, 0.085), audioRand(0.16, 0.22), 0)
-	scheduleTone("sine", varyFreq(90, 0.06), varyFreq(70, 0.06), audioRand(0.08, 0.11), audioRand(0.05, 0.08), 0)
+	if enableSounds {
+		nativeSound("paddle")
+	}
 }
 
 // Ball-ball impacts use a short, light metallic/glass-like tick. Loudness and
