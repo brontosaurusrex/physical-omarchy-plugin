@@ -4,10 +4,13 @@ import os, pathlib, shutil, subprocess, tempfile
 
 duration = int(os.environ.get("PHYSICAL_PERF_SECONDS", "180"))
 level = int(os.environ.get("PHYSICAL_PERF_LEVEL", "26"))
+restart_seconds = int(os.environ.get("PHYSICAL_PERF_RESTART_SECONDS", "0"))
+if restart_seconds and not 10 <= restart_seconds <= duration:
+    raise SystemExit("Restart interval must be 0 or between 10 seconds and the test duration")
 stress = os.environ.get("PHYSICAL_PERF_STRESS", "1") != "0"
 if not 10 <= duration <= 3600 or not 1 <= level <= 33:
     raise SystemExit("Duration must be 10–3600 seconds and level 1–33")
-project = pathlib.Path(__file__).resolve().parents[1]
+project = pathlib.Path(os.environ.get("PHYSICAL_PERF_PROJECT", str(pathlib.Path(__file__).resolve().parents[1]))).resolve()
 shell_dir = pathlib.Path(os.environ.get("OMARCHY_SHELL_DIR", "/usr/share/omarchy/shell"))
 harness = r'''
 import QtQuick
@@ -21,6 +24,7 @@ ShellRoot {
     property bool started: false
     property int totalFrames: 0
     property real minimumFrames: 10000
+    property real roundElapsed: 0
     property real elapsed: 0
     property double lastSample: 0
     property bool navigating: false
@@ -29,6 +33,8 @@ ShellRoot {
     Port.Physical { id: game }
     Component.onCompleted: game.open("{}")
     Timer { interval: 1000; running: true; repeat: true; onTriggered: {
+        if (game.errorText || game.renderError) { console.error("PERF FAILED", game.errorText, game.renderError); Qt.exit(1); return; }
+        if (!game.opened) { console.error("PERF FAILED: game window closed"); Qt.exit(1); return; }
         if (!game.engineReady) return;
         if (!root.navigating) {
             if (Quickshell.env("PHYSICAL_PERF_MUTE") === "1") game.send({action:"volume", value:0});
@@ -45,12 +51,15 @@ ShellRoot {
         }
         var interval = (Date.now() - root.lastSample) / 1000;
         var painted = game.paintedFrames - root.frames;
+        if (painted === 0 && root.started) { console.error("PERF FAILED: rendering stalled"); Qt.exit(1); return; }
         root.elapsed += interval;
+        root.roundElapsed += interval;
         root.lastSample = Date.now();
         root.totalFrames += game.paintedFrames - root.frames;
         root.minimumFrames = Math.min(root.minimumFrames, painted / interval);
         root.maxDebris = Math.max(root.maxDebris,game.state.debrisPieces || 0);
         console.log("PERF", ++root.seconds, "paintedFPS", (painted / interval).toFixed(2), "level", game.state.level, "balls", game.state.balls, "replayFrames", game.state.replayFrames, "engineFPS", game.state.fps, "debris", game.state.debrisPieces, "remaining", game.state.remaining, "transition", game.state.complete || game.state.gameOver || game.state.ready);
+        if (Quickshell.env("PHYSICAL_RENDER_TIMINGS")) console.log("TIMING", root.seconds, "parse", game.state.qtParseMs, "cache", game.state.qtCacheMs, "compile", game.state.qtCompileMs, "brickPaint", game.state.qtBrickPaintMs, "frontPaint", game.state.qtFrontPaintMs);
         root.frames = game.paintedFrames;
         if (root.seconds === 10 && Quickshell.env("PHYSICAL_TEST_ARTIFACTS")) game.contentView.grabToImage(function(result) { result.saveToFile(Quickshell.env("PHYSICAL_TEST_ARTIFACTS") + "/physical-gpu-stress.png"); });
         if (root.restarting) {
@@ -58,15 +67,16 @@ ShellRoot {
             if (game.state.ready || game.state.paused) game.shortcut(" ");
             if (__STRESS__) { game.shortcut("z"); game.shortcut("m"); game.shortcut("2"); game.shortcut("2"); }
             root.restarting = false;
-        } else if (!root.restarting && (game.state.complete || game.state.gameOver)) {
-            game.send({action:"restart"}); root.restarting = true;
+        } else if (!root.restarting && (game.state.complete || game.state.gameOver || (__RESTART__ > 0 && root.roundElapsed >= __RESTART__))) {
+            console.log("PERF restarting round", root.seconds, "remaining", game.state.remaining);
+            game.send({action:"restart"}); root.restarting = true; root.roundElapsed = 0;
         } else if (!root.restarting && (game.state.ready || game.state.paused)) game.shortcut(" ");
         if (root.elapsed >= __SECONDS__) { console.log("SMOKE PASS: sustained gameplay", "level", __LEVEL__, "stress", __STRESS__, "seconds", root.elapsed.toFixed(2), "average",root.totalFrames/root.elapsed,"minimum",root.minimumFrames,"max debris",root.maxDebris); Qt.exit(0); }
     } }
 }
 '''
 
-harness = harness.replace("__LEVEL__", str(level)).replace("__SECONDS__", str(duration)).replace("__STRESS__", "true" if stress else "false")
+harness = harness.replace("__LEVEL__", str(level)).replace("__SECONDS__", str(duration)).replace("__STRESS__", "true" if stress else "false").replace("__RESTART__", str(restart_seconds))
 
 with tempfile.TemporaryDirectory(prefix="physical-qml-test-") as directory:
     folder = pathlib.Path(directory)
@@ -100,7 +110,7 @@ with tempfile.TemporaryDirectory(prefix="physical-qml-test-") as directory:
                     print("PERF FAILED: repeated Qt socket errors; stopping stalled benchmark", flush=True)
                     run.kill()
                     break
-            if "PERF" in line or "SMOKE PASS:" in line or os.environ.get("PHYSICAL_TEST_DEBUG"):
+            if "PERF" in line or "TIMING" in line or "SMOKE PASS:" in line or os.environ.get("PHYSICAL_TEST_DEBUG"):
                 print(line.strip(), flush=True)
         run.wait()
     finally:

@@ -56,3 +56,39 @@ func TestNativeContactAudio(t *testing.T) {
 		}
 	}
 }
+
+func TestNativePowerupAudioIdentity(t *testing.T) {
+	oldSounds, oldEnabled, oldVisible := nativeSounds, enableSounds, nativeVisible
+	t.Cleanup(func() { nativeSounds, enableSounds, nativeVisible = oldSounds, oldEnabled, oldVisible })
+	enableSounds, nativeVisible = true, true
+	for _, feature := range []string{"bigpaddle", "blackhole", "breakunbreakable", "dualballs", "influencer", "lowgravity", "magnet", "nuke", "passthrough", "reversegravity", "speedboost", "zapper"} {
+		nativeSounds = nil
+		playMagicFeature(" "+feature+" ", 500, .7, 300)
+		if len(nativeSounds) != 1 || nativeSounds[0]["feature"] != feature || nativeSounds[0]["kind"] != "magic" {
+			t.Fatalf("lost powerup identity: %v", nativeSounds)
+		}
+		args := nativeSounds[0]["args"].([]float64)
+		if args[0] != 500 || args[1] != .7 {
+			t.Fatalf("lost impact/pitch: %v", args)
+		}
+	}
+	nativeSounds = nil
+	for i := 0; i < 12; i++ {
+		nativeSound("brick")
+	}
+	playMagicFeature("blackhole", 500, 1, 300)
+	if len(nativeSounds) != 12 || nativeSounds[11]["feature"] != "blackhole" {
+		t.Fatal("feature cue was lost in a full collision queue")
+	}
+	nativeSounds = nil
+	enableSounds = false
+	playMagicFeature("blackhole", 500, 1, 300)
+	if len(nativeSounds) != 0 {
+		t.Fatal("muted powerup emitted sound")
+	}
+	enableSounds, nativeVisible = true, false
+	playMagicFeature("blackhole", 500, 1, 300)
+	if len(nativeSounds) != 0 {
+		t.Fatal("hidden powerup emitted sound")
+	}
+}

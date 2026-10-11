@@ -17,6 +17,11 @@ static void checkOutline(const QPainterPath &path) {
     require(!triangles.empty() && triangles.size()%3==0,"outline produced no complete triangles");
     require(std::abs(total-area(path.toFillPolygon()))<0.00001,"triangulation changed the outline area");
 }
+class TestGeometryLayer : public DebrisLayer {
+public:
+    TestGeometryLayer():DebrisLayer(nullptr) {}
+    using DebrisLayer::updatePaintNode;
+};
 int main(int argc,char **argv) {
     QGuiApplication application(argc,argv);
     QPainterPath circle; circle.addEllipse(QPointF(0,0),12,12); checkOutline(circle);
@@ -39,6 +44,40 @@ int main(int argc,char **argv) {
     }
     require(transparentEdge && visibleCore,"glow lost antialiased edges or core");
 
+    QVector<Vertex> brickMesh;
+    appendBrickMesh(brickMesh,10,20,34,38,.2,5,QColor("#22aa44"),QColor("#99ddaa"),1,1);
+    require(!brickMesh.isEmpty() && brickMesh.size()%3==0,"GPU brick mesh is incomplete");
+    bool fillVisible=false,strokeVisible=false,edgeTransparent=false;
+    for(const auto &v:brickMesh) {
+        require(std::isfinite(v.x) && std::isfinite(v.y),"GPU brick produced invalid geometry");
+        require(v.r<=v.a && v.g<=v.a && v.b<=v.a,"GPU brick colors are not premultiplied");
+        if(v.a==0) edgeTransparent=true;
+        if(v.a==255 && v.r==34 && v.g==170 && v.b==68) fillVisible=true;
+        if(v.a==255 && v.r==153 && v.g==221 && v.b==170) strokeVisible=true;
+    }
+    require(fillVisible && strokeVisible && edgeTransparent,"GPU brick lost fill, stroke or antialiasing fringe");
+    // Full dense levels exceed 16-bit vertex ranges. Every triangle must survive
+    // chunking, including updates that shrink or empty the layer.
+    TestGeometryLayer layer; layer.setWidth(1800); layer.setHeight(900);
+    QVector<Vertex> large;
+    for(int i=0;i<660;++i) appendBrickMesh(large,i%44*40,i/44*40,34,38,0,5,QColor("#22aa44"),QColor("#99ddaa"),1,1);
+    require(large.size()>65535,"large brick test did not exceed index range");
+    layer.setFrame(large,1800,900);
+    auto nodes=layer.updatePaintNode(nullptr,nullptr);
+    int count=0,children=0;
+    for(auto child=nodes->firstChild();child;child=child->nextSibling()) {
+        auto geometry=static_cast<QSGGeometryNode *>(child)->geometry();
+        require(geometry->vertexCount()<=61440 && geometry->vertexCount()%3==0,"unsafe GPU triangle chunk");
+        auto points=geometry->vertexDataAsColoredPoint2D();
+        for(int i=0;i<geometry->vertexCount();++i,++count) {
+            require(points[i].x==large[count].x && points[i].y==large[count].y && points[i].a==large[count].a,"GPU chunk lost or reordered brick vertices");
+        }
+        ++children;
+    }
+    require(count==large.size() && children>1,"dense brick field was truncated");
+    layer.setFrame(brickMesh,1800,900); nodes=layer.updatePaintNode(nodes,nullptr);
+    require(nodes->childCount()==1,"shrinking GPU frame retained stale geometry");
+    layer.setFrame({},1800,900); require(layer.updatePaintNode(nodes,nullptr)==nullptr,"empty GPU frame retained bricks");
     GameRenderer renderer; renderer.setWidth(80); renderer.setHeight(80);
     const QString packet=R"({"type":"frame","width":80,"height":80,"state":{},"caches":{"1":[["set","fillStyle","#00ff00"],["fillRect",32,32,16,16]]},"ops":[["set","fillStyle","#0000ff"],["fillRect",0,0,80,80],["debris",1,30,40,1,0,"#ff0000",10,true,0,[]],["cache",1],["debris",2,50,40,1,0,"#ff8800",10,true,0,[]]]})";
     renderer.acceptLine(packet);
@@ -49,5 +88,38 @@ int main(int argc,char **argv) {
     require(image.pixelColor(25,40)==QColor("#ff0000"),"slow debris disappeared");
     require(image.pixelColor(35,40)==QColor("#00ff00"),"slow debris covered living bricks");
     require(image.pixelColor(45,40)==QColor("#ff8800"),"fast debris was hidden behind living bricks");
+    // The compact batch must rasterize the same rounded/tilted brick contours
+    // as the original individual canvas commands, including each palette kind.
+    auto renderBricks=[&](bool batch) {
+        GameRenderer r; r.setWidth(100); r.setHeight(100);
+        QJsonArray cache;
+        QJsonArray values;
+        for(int kind=0;kind<3;++kind) {
+            qreal x=10+kind*28,y=20+kind*18,angle=.2;
+            values.append(x); values.append(y); values.append(20); values.append(12); values.append(angle); values.append(kind);
+            if(!batch) {
+                cache.append(QJsonArray{"set","fillStyle",QStringList{"#11aa22","#aa33bb","#4455dd"}[kind]});
+                cache.append(QJsonArray{"set","strokeStyle",QStringList{"#99dd99","#ee99ff","#aabbff"}[kind]});
+                cache.append(QJsonArray{"set","lineWidth",kind==0 ? 1 : 2});
+                cache.append(QJsonArray{"save"}); cache.append(QJsonArray{"translate",x+10,y+6});
+                cache.append(QJsonArray{"rotate",angle}); cache.append(QJsonArray{"beginPath"});
+                cache.append(QJsonArray{"roundRect",-10,-6,20,12,3});
+                cache.append(QJsonArray{"fill"}); cache.append(QJsonArray{"stroke"}); cache.append(QJsonArray{"restore"});
+            }
+        }
+        if(batch) cache.append(QJsonArray{"bricks",values,true,3,"#11aa22","#99dd99","#aa33bb","#ee99ff","#4455dd","#aabbff"});
+        QJsonObject packet{{"type","frame"},{"width",100},{"height",100},{"caches",QJsonObject{{"1",cache}}},{"ops",QJsonArray{QJsonArray{"cache",1}}}};
+        r.acceptLine(QString::fromUtf8(QJsonDocument(packet).toJson(QJsonDocument::Compact)));
+        require(r.renderError().isEmpty(),"brick batch failed");
+        QImage result(100,100,QImage::Format_ARGB32_Premultiplied); result.fill(Qt::transparent);
+        QPainter painter(&result); r.paint(&painter); painter.end(); return result;
+    };
+    const auto original=renderBricks(false),batched=renderBricks(true);
+    int difference=0;
+    for(int y=0;y<100;++y) for(int x=0;x<100;++x) {
+        const auto a=original.pixelColor(x,y),b=batched.pixelColor(x,y);
+        if(std::abs(a.red()-b.red())>3 || std::abs(a.green()-b.green())>3 || std::abs(a.blue()-b.blue())>3 || std::abs(a.alpha()-b.alpha())>3) ++difference;
+    }
+    require(difference<10,"brick batch changed rounded corners, tilt or game colors");
     std::puts("PASS: native outline triangulation, game colors, and debris depth ordering");
 }

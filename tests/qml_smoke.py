@@ -64,7 +64,19 @@ ShellRoot {
                 if (Quickshell.env("PHYSICAL_TEST_WAYLAND")) {
                     var audio = findItem(game, "physicalAudio"), wall = findItem(game, "sound-wall-0"), paddle = findItem(game, "sound-paddle-0");
                     if (!audio || !wall || !paddle || !wall.ready || !paddle.ready) { console.error("SMOKE contact clips not loaded"); Qt.exit(1); return; }
-                    audio.play([{kind:"wall"}, {kind:"paddle"}]);
+                    var previous = "", selected = ({});
+                    for (var sample = 0; sample < 300; ++sample) {
+                        var name = audio.chooseClip({kind:"brick"});
+                        if (name === previous || audio.brickClips.indexOf(name) < 0) { console.error("SMOKE random brick selection failed"); Qt.exit(1); return; }
+                        selected[name] = true; previous = name;
+                    }
+                    if (Object.keys(selected).length < 15) { console.error("SMOKE normal sample bank not used"); Qt.exit(1); return; }
+                    for (var cue = 0; cue < audio.featureClips.length; ++cue) {
+                        var featureName = audio.featureClips[cue];
+                        if (audio.chooseClip({kind:"magic", feature:featureName.slice(8)}) !== featureName || !findItem(game, "sound-" + featureName + "-0").ready) { console.error("SMOKE powerup cue missing", featureName); Qt.exit(1); return; }
+                    }
+                    audio.play([{kind:"wall"}, {kind:"paddle"}, {kind:"magic", feature:"blackhole", args:[500,1]}]);
+                    if (!audio.isPlaying("feature-blackhole")) { console.error("SMOKE powerup sample not playing"); Qt.exit(1); return; }
                     if (!(wall.playing || findItem(game, "sound-wall-1").playing) || !(paddle.playing || findItem(game, "sound-paddle-1").playing)) { console.error("SMOKE contact clips not playing"); Qt.exit(1); }
                 }
                 game.toggleMenu();

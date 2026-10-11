@@ -1,6 +1,7 @@
 #pragma once
 #include <QAudioSink>
 #include <QFile>
+#include <QDir>
 #include <QIODevice>
 #include <QMediaDevices>
 #include <QMutex>
@@ -21,7 +22,7 @@ class AudioMixer : public QObject {
     Q_PROPERTY(qreal volume READ volume WRITE setVolume NOTIFY volumeChanged)
     Q_PROPERTY(quint64 revision READ revision NOTIFY revisionChanged)
     struct Clip { QVector<float> samples; int rate=44100; };
-    struct Voice { QString name; int index; double position=0; };
+    struct Voice { QString name; int index; double position=0; double pitch=1; const Clip *clip=nullptr; };
     class Output : public QIODevice {
         AudioMixer *mixer;
     public:
@@ -50,13 +51,13 @@ class AudioMixer : public QObject {
         for (qint64 frame=0;frame<frames;++frame) {
             float sample=0;
             for (auto &voice:voices) {
-                const auto &clip=clips[voice.name];
+                const auto &clip=*voice.clip;
                 const int index=int(voice.position);
                 if (index<clip.samples.size()) {
                     const float fraction=float(voice.position-index);
                     const float a=clip.samples[index],b=clip.samples[qMin(index+1,clip.samples.size()-1)];
                     sample+=(a+(b-a)*fraction)*float(gain)*.18f;
-                    voice.position+=double(clip.rate)/format.sampleRate();
+                    voice.position+=double(clip.rate)/format.sampleRate()*voice.pitch;
                 }
             }
             sample=std::clamp(sample,-1.f,1.f);
@@ -71,7 +72,7 @@ class AudioMixer : public QObject {
                 }
             }
         }
-        voices.erase(std::remove_if(voices.begin(),voices.end(),[this](const Voice &v){ return v.position>=clips[v.name].samples.size(); }),voices.end());
+        voices.erase(std::remove_if(voices.begin(),voices.end(),[this](const Voice &v){ return v.position>=v.clip->samples.size(); }),voices.end());
         return frames*bytes*channels;
     }
 public:
@@ -99,9 +100,11 @@ public:
         if(folder==value) return;
         stop(); folder=value;
         QHash<QString,Clip> loaded;
-        const QStringList names={"wall","paddle","brick0","brick1","brick2","brick3","magic0","magic1","magic2","magic3","tone120","tone240","tone360","tone480","tone720","tone960","tone1440"};
-        for(const auto &name:names) {
-            QFile file(folder.resolved(QUrl(name+".wav")).toLocalFile());
+        const QDir directory(folder.toLocalFile());
+        const auto files=directory.entryList({"*.wav"},QDir::Files,QDir::Name);
+        for(const auto &filename:files) {
+            const QString name=filename.chopped(4);
+            QFile file(directory.filePath(filename));
             if(!file.open(QIODevice::ReadOnly)) continue;
             const QByteArray wav=file.readAll();
             if(wav.size()<12 || wav.left(4)!="RIFF" || wav.mid(8,4)!="WAVE") continue;
@@ -130,15 +133,29 @@ public:
         for(const auto &v:voices) if(v.name==name && v.index==index) return true;
         return false;
     }
-    Q_INVOKABLE void play(const QString &name,int index) {
+    Q_INVOKABLE void play(const QString &name,int index,double pitch=1) {
         if(!sink) return;
         { QMutexLocker lock(&mutex);
-          if(gain<=0 || !clips.contains(name)) return;
+          const auto clip=clips.constFind(name);
+          if(gain<=0 || clip==clips.cend()) return;
           for(const auto &v:voices) if(v.name==name && v.index==index) return;
-          if(voices.size()>=34) return;
-          voices.append({name,index,0}); }
+          if(voices.size()>=34) {
+              if(!name.startsWith("feature-")) return;
+              auto collision=std::find_if(voices.begin(),voices.end(),[](const Voice &v){ return !v.name.startsWith("feature-"); });
+              if(collision==voices.end()) return;
+              voices.erase(collision);
+          }
+          voices.append({name,index,0,std::isfinite(pitch) ? std::clamp(pitch,0.1,4.) : 1., &clip.value()}); }
         if(!started) { sink->start(output); started=true; }
         status.start(); ++version; emit revisionChanged();
+    }
+    Q_INVOKABLE void playAvailable(const QString &name,double pitch=1) {
+        int free=-1;
+        { QMutexLocker lock(&mutex);
+          bool busy[2]={false,false};
+          for(const auto &v:voices) if(v.name==name && v.index>=0 && v.index<2) busy[v.index]=true;
+          for(int i=0;i<2;++i) if(!busy[i]) { free=i; break; } }
+        if(free>=0) play(name,free,pitch);
     }
     Q_INVOKABLE void stop() { { QMutexLocker lock(&mutex); voices.clear(); } status.stop(); ++version; emit revisionChanged(); }
 signals:

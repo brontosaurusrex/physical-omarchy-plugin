@@ -12,3 +12,5 @@ __pycache__/
 /bin/protocols/
 
 /bin/audiomixer.moc
+
+/bin/gpu-bricks-test

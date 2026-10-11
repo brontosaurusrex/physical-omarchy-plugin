@@ -13,6 +13,7 @@
 #include <QSGVertexColorMaterial>
 #include <QSGRendererInterface>
 #include <QMutex>
+#include <QElapsedTimer>
 #include <QMutexLocker>
 #include <atomic>
 #include <cmath>
@@ -30,21 +31,37 @@ public:
     void setFrame(const QVector<Vertex> &next,qreal w,qreal h) { vertices=next; gw=w; gh=h; update(); }
 protected:
     QSGNode *updatePaintNode(QSGNode *old,UpdatePaintNodeData *) override {
-        auto node=static_cast<QSGGeometryNode *>(old);
-        if(vertices.isEmpty()) { delete node; return nullptr; }
-        if(!node) {
-            node=new QSGGeometryNode;
-            auto geometry=new QSGGeometry(QSGGeometry::defaultAttributes_ColoredPoint2D(),vertices.size());
-            geometry->setDrawingMode(QSGGeometry::DrawTriangles);
-            node->setGeometry(geometry); node->setFlag(QSGNode::OwnsGeometry);
-            node->setMaterial(new QSGVertexColorMaterial); node->setFlag(QSGNode::OwnsMaterial);
-        } else node->geometry()->allocate(vertices.size());
-        auto output=node->geometry()->vertexDataAsColoredPoint2D();
-        for(int i=0;i<vertices.size();++i) {
-            auto &v=vertices[i]; output[i].set(v.x*width()/gw,v.y*height()/gh,v.r,v.g,v.b,v.a);
+        // Qt's batch renderer can use 16-bit indices even for unindexed input.
+        // Keep triangle chunks below that range so large brick fields render whole.
+        constexpr int chunkSize=61440; // Divisible by three.
+        if(vertices.isEmpty()) { delete old; return nullptr; }
+        auto root=old ? old : new QSGNode;
+        auto child=root->firstChild();
+        for(int start=0;start<vertices.size();start+=chunkSize) {
+            const int count=qMin(chunkSize,int(vertices.size())-start);
+            QSGGeometryNode *node;
+            if(child) {
+                node=static_cast<QSGGeometryNode *>(child);
+                child=child->nextSibling();
+                node->geometry()->allocate(count);
+            } else {
+                node=new QSGGeometryNode;
+                auto geometry=new QSGGeometry(QSGGeometry::defaultAttributes_ColoredPoint2D(),count);
+                geometry->setDrawingMode(QSGGeometry::DrawTriangles);
+                node->setGeometry(geometry); node->setFlag(QSGNode::OwnsGeometry);
+                node->setMaterial(new QSGVertexColorMaterial); node->setFlag(QSGNode::OwnsMaterial);
+                root->appendChildNode(node);
+            }
+            auto output=node->geometry()->vertexDataAsColoredPoint2D();
+            for(int i=0;i<count;++i) {
+                const auto &v=vertices[start+i]; output[i].set(v.x*width()/gw,v.y*height()/gh,v.r,v.g,v.b,v.a);
+            }
+            node->markDirty(QSGNode::DirtyGeometry);
         }
-        node->markDirty(QSGNode::DirtyGeometry);
-        return node;
+        while(child) {
+            auto next=child->nextSibling(); root->removeChildNode(child); delete child; child=next;
+        }
+        return root;
     }
     void geometryChange(const QRectF &next,const QRectF &previous) override { QQuickItem::geometryChange(next,previous); update(); }
 };
@@ -52,11 +69,61 @@ protected:
 class PictureLayer : public QQuickPaintedItem {
     QPicture picture;
     qreal gw=1800,gh=900;
+    std::atomic<qint64> paintNs{0};
+    const bool profile=qEnvironmentVariableIsSet("PHYSICAL_RENDER_TIMINGS");
 public:
+    qreal paintMs() const { return paintNs.load()/1e6; }
     PictureLayer(QQuickItem *parent):QQuickPaintedItem(parent) { setAntialiasing(true); setRenderTarget(FramebufferObject); }
     void setFrame(const QPicture &next,qreal w,qreal h) { picture=next; gw=w; gh=h; update(); }
-    void paint(QPainter *painter) override { painter->scale(width()/gw,height()/gh); painter->drawPicture(0,0,picture); }
+    void paint(QPainter *painter) override { QElapsedTimer timer; if(profile) timer.start(); painter->scale(width()/gw,height()/gh); painter->drawPicture(0,0,picture); if(profile) paintNs.store(timer.nsecsElapsed()); }
 };
+
+// Quadratic rounded contours match the original canvas corners. Inner fill,
+// stroke and a one-physical-pixel transparent fringe are separate GPU rings.
+static void appendBrickMesh(QVector<Vertex> &out,qreal x,qreal y,qreal w,qreal h,
+                            qreal angle,qreal radius,QColor fill,QColor stroke,qreal pen,qreal fringe) {
+    const int segments=qBound(3,int(std::ceil(std::sqrt(radius/qMax(fringe,.001)))),12);
+    auto contour=[&](qreal inset) {
+        QVector<QPointF> points;
+        const qreal l=inset,t=inset,r=w-inset,b=h-inset;
+        const qreal corner=qBound(0.,radius-inset,qMax(0.,qMin((r-l)/2,(b-t)/2)));
+        QPointF current(l+corner,t); points.append(current);
+        auto line=[&](QPointF next) { points.append(next); current=next; };
+        auto quad=[&](QPointF control,QPointF end) {
+            const QPointF start=current;
+            for(int i=1;i<=segments;++i) { qreal f=qreal(i)/segments; points.append(start*((1-f)*(1-f))+control*(2*f*(1-f))+end*(f*f)); }
+            current=end;
+        };
+        line({r-corner,t}); quad({r,t},{r,t+corner});
+        line({r,b-corner}); quad({r,b},{r-corner,b});
+        line({l+corner,b}); quad({l,b},{l,b-corner});
+        line({l,t+corner}); quad({l,t},{l+corner,t});
+        points.removeLast(); return points;
+    };
+    fringe=qMin(fringe,pen*.8);
+    const auto core=contour(pen/2+fringe/2),inner=contour(pen/2-fringe/2),outer=contour(-pen/2+fringe/2),edge=contour(-pen/2-fringe/2);
+    const qreal c=std::cos(angle),s=std::sin(angle);
+    auto vertex=[&](QPointF p,QColor color,qreal alpha=1) {
+        p-=QPointF(w/2,h/2);
+        const qreal coverage=color.alphaF()*alpha;
+        return Vertex{float(x+w/2+p.x()*c-p.y()*s),float(y+h/2+p.x()*s+p.y()*c),
+            static_cast<unsigned char>(qRound(color.red()*coverage)),static_cast<unsigned char>(qRound(color.green()*coverage)),
+            static_cast<unsigned char>(qRound(color.blue()*coverage)),static_cast<unsigned char>(qRound(255*coverage))};
+    };
+    auto triangle=[&](Vertex a,Vertex b,Vertex c) { out.append(a);out.append(b);out.append(c); };
+    const auto center=vertex({w/2,h/2},fill);
+    for(int i=0;i<inner.size();++i) {
+        const int j=(i+1)%inner.size();
+        const auto fi=vertex(core[i],fill),fj=vertex(core[j],fill);
+        triangle(center,fi,fj);
+        const auto ia=vertex(inner[i],stroke),ib=vertex(inner[j],stroke);
+        triangle(fi,ia,ib); triangle(fi,ib,fj);
+        const auto ai=vertex(inner[i],stroke),aj=vertex(inner[j],stroke),bi=vertex(outer[i],stroke),bj=vertex(outer[j],stroke);
+        triangle(ai,bi,bj); triangle(ai,bj,aj);
+        const auto ci=vertex(edge[i],stroke,0),cj=vertex(edge[j],stroke,0);
+        triangle(bi,ci,cj); triangle(bi,cj,bj);
+    }
+}
 
 // Build glow strokes as a single GPU triangle batch. Rasterizing six wide,
 // antialiased QPainter strokes per bolt was the expensive zapper path.
@@ -171,6 +238,11 @@ class GameRenderer : public QQuickPaintedItem {
     QHash<quint32,Outline> outlines;
     DebrisLayer *slowLayer=nullptr,*fastLayer=nullptr,*boltLayer=nullptr;
     PictureLayer *brickLayer=nullptr,*frontLayer=nullptr;
+    DebrisLayer *brickGpuLayer=nullptr;
+    QHash<int,QVector<Vertex>> brickMeshes;
+    QHash<QString,QVector<Vertex>> brickTemplates;
+    QHash<int,QJsonArray> brickCommands;
+    int activeBrickCache=-1;
     quint64 childBrickRevision=0;
     QMutex mutex;
     std::shared_ptr<Scene> scene=std::make_shared<Scene>();
@@ -235,6 +307,47 @@ class GameRenderer : public QQuickPaintedItem {
                 path.lineTo(x+w,y+h-r); path.quadTo(x+w,y+h,x+w-r,y+h);
                 path.lineTo(x+r,y+h); path.quadTo(x,y+h,x,y+h-r);
                 path.lineTo(x,y+r); path.quadTo(x,y,x+r,y); path.closeSubpath();
+            } else if (name=="bricks") {
+                const auto values=op[1].toArray(); const bool tilted=op[2].toBool();
+                QVector<QPainterPath> groups[3];
+                if(vertices) vertices->reserve(vertices->size()+values.size()/6*588);
+                for(int i=0;i+5<values.size();i+=6) {
+                    const qreal x=values[i].toDouble(),y=values[i+1].toDouble(),w=values[i+2].toDouble(),h=values[i+3].toDouble();
+                    const int kind=qBound(0,values[i+5].toInt(),2);
+                    const qreal r=qMax(0.,qMin(n(3),qMin(w/2,h/2)));
+                    if(vertices) {
+                        const qreal dpr=window() ? window()->effectiveDevicePixelRatio() : 1;
+                        const qreal fringe=gw/qMax(1.,width()*dpr);
+                        const QColor fill=color(op[4+kind*2].toString()),stroke=color(op[5+kind*2].toString());
+                        const QString key=QString::number(w)+":"+QString::number(h)+":"+QString::number(r)+":"+QString::number(kind)+":"+fill.name(QColor::HexArgb)+":"+stroke.name(QColor::HexArgb)+":"+QString::number(fringe);
+                        if(!brickTemplates.contains(key)) {
+                            if(brickTemplates.size()>256) brickTemplates.clear();
+                            QVector<Vertex> mesh; appendBrickMesh(mesh,0,0,w,h,0,r,fill,stroke,kind==0 ? 1 : 2,fringe);
+                            brickTemplates.insert(key,std::move(mesh));
+                        }
+                        const qreal angle=tilted ? values[i+4].toDouble() : 0,c=std::cos(angle),s=std::sin(angle);
+                        const auto &mesh=brickTemplates[key];
+                        for(auto v:mesh) {
+                            const qreal px=v.x-w/2,py=v.y-h/2;
+                            v.x=x+w/2+px*c-py*s; v.y=y+h/2+px*s+py*c;
+                            vertices->append(v);
+                        }
+                        continue;
+                    }
+                    QPainterPath brick;
+                    brick.moveTo(r,0); brick.lineTo(w-r,0); brick.quadTo(w,0,w,r);
+                    brick.lineTo(w,h-r); brick.quadTo(w,h,w-r,h);
+                    brick.lineTo(r,h); brick.quadTo(0,h,0,h-r);
+                    brick.lineTo(0,r); brick.quadTo(0,0,r,0); brick.closeSubpath();
+                    QTransform transform; transform.translate(x+w/2,y+h/2);
+                    if(tilted) transform.rotateRadians(values[i+4].toDouble());
+                    transform.translate(-w/2,-h/2); groups[kind].append(transform.map(brick));
+                }
+                for(int kind=0;kind<3;++kind) {
+                    const auto fill=color(op[4+kind*2].toString());
+                    const QPen pen(color(op[5+kind*2].toString()),kind==0 ? 1 : 2,Qt::SolidLine,Qt::FlatCap,Qt::MiterJoin);
+                    for(const auto &brick:groups[kind]) { painter.fillPath(brick,fill); painter.strokePath(brick,pen); }
+                }
             } else if (name=="arc") {
                 const qreal pi=std::acos(-1.), full=2*pi, start=n(4);
                 qreal delta=n(5)-start;
@@ -275,7 +388,11 @@ class GameRenderer : public QQuickPaintedItem {
                 }
                 const QColor fill=color(op[6].toString());
                 if(vertices) {
-                    for(const auto &point:outlines[id].triangles) vertices->append(Vertex{float(n(2)+point.x()*n(4)-point.y()*n(5)),float(n(3)+point.x()*n(5)+point.y()*n(4)),static_cast<unsigned char>(fill.red()),static_cast<unsigned char>(fill.green()),static_cast<unsigned char>(fill.blue()),255});
+                    const qreal x=n(2),y=n(3),c=n(4),s=n(5);
+                    const auto red=static_cast<unsigned char>(fill.red()),green=static_cast<unsigned char>(fill.green()),blue=static_cast<unsigned char>(fill.blue());
+                    const auto &triangles=outlines[id].triangles;
+                    vertices->reserve(vertices->size()+triangles.size());
+                    for(const auto &point:triangles) vertices->append(Vertex{float(x+point.x()*c-point.y()*s),float(y+point.x()*s+point.y()*c),red,green,blue,255});
                 } else {
                     painter.save(); painter.setTransform(QTransform(n(4),n(5),-n(5),n(4),n(2),n(3)));
                     painter.fillPath(outlines[id].path,fill); painter.restore();
@@ -322,8 +439,9 @@ public:
         setAntialiasing(true); setRenderTarget(QQuickPaintedItem::FramebufferObject); setOpaquePainting(true); setClip(true);
         slowLayer=new DebrisLayer(this); slowLayer->setZ(1);
         brickLayer=new PictureLayer(this); brickLayer->setZ(2);
-        // Bricks are cached: rasterize their rounded edges with high-quality
-        // antialiasing once per change, then composite the texture on the GPU.
+        brickGpuLayer=new DebrisLayer(this); brickGpuLayer->setZ(2);
+        // The image path remains for software rendering and legacy packets;
+        // current brick batches use cached GPU meshes with antialiased edges.
         brickLayer->setRenderTarget(QQuickPaintedItem::Image);
         fastLayer=new DebrisLayer(this); fastLayer->setZ(3);
         boltLayer=new DebrisLayer(this); boltLayer->setZ(4);
@@ -338,12 +456,21 @@ public:
     QString fontFamily()const{return family;}
     void setFontFamily(const QString &value) { if(family==value)return; family=value; emit fontFamilyChanged(); }
     Q_INVOKABLE QVariantMap acceptLine(const QString &line) {
+        const bool profile=qEnvironmentVariableIsSet("PHYSICAL_RENDER_TIMINGS");
+        QElapsedTimer timer; if(profile) timer.start();
         QJsonParseError parse;
         QJsonObject packet=QJsonDocument::fromJson(line.toUtf8(),&parse).object();
         if(parse.error!=QJsonParseError::NoError) { error=parse.errorString(); emit renderErrorChanged(); return {}; }
         if(packet["type"].toString()!="frame") return packet.toVariantMap();
+        const qreal parseMs=profile ? timer.nsecsElapsed()/1e6 : 0;
         const auto updates=packet["caches"].toObject();
-        for(auto it=updates.begin();it!=updates.end();++it) { int id=it.key().toInt(); caches[id]=compile(it.value().toArray()); revisions[id]=++nextRevision; }
+        const bool gpu=window() && window()->rendererInterface()->graphicsApi()==QSGRendererInterface::OpenGL;
+        for(auto it=updates.begin();it!=updates.end();++it) {
+            int id=it.key().toInt(); QVector<Vertex> mesh; brickCommands[id]=it.value().toArray();
+            caches[id]=compile(it.value().toArray(),gpu ? &mesh : nullptr);
+            brickMeshes[id]=std::move(mesh); revisions[id]=++nextRevision;
+        }
+        const qreal cacheMs=profile ? timer.nsecsElapsed()/1e6-parseMs : 0;
         const auto ops=packet["ops"].toArray();
         auto next=std::make_shared<Scene>();
         next->width=packet["width"].toDouble(1800); next->height=packet["height"].toDouble(900);
@@ -356,16 +483,29 @@ public:
             next->bricks=caches.value(cache); next->brickRevision=revisions.value(cache);
             next->front=compile(after,next->gpu ? &next->fast : nullptr,next->gpu ? &next->bolts : nullptr);
         }
-        slowLayer->setVisible(next->gpu); brickLayer->setVisible(next->gpu); fastLayer->setVisible(next->gpu); boltLayer->setVisible(next->gpu); frontLayer->setVisible(next->gpu);
+        activeBrickCache=cache;
+        slowLayer->setVisible(next->gpu); brickLayer->setVisible(next->gpu && brickMeshes.value(cache).isEmpty()); brickGpuLayer->setVisible(next->gpu && !brickMeshes.value(cache).isEmpty()); fastLayer->setVisible(next->gpu); boltLayer->setVisible(next->gpu); frontLayer->setVisible(next->gpu);
         if(next->gpu) {
             slowLayer->setFrame(next->slow,next->width,next->height);
             fastLayer->setFrame(next->fast,next->width,next->height);
             boltLayer->setFrame(next->bolts,next->width,next->height);
             frontLayer->setFrame(next->front,next->width,next->height);
-            if(childBrickRevision!=next->brickRevision) { brickLayer->setFrame(next->bricks,next->width,next->height); childBrickRevision=next->brickRevision; }
+            if(childBrickRevision!=next->brickRevision) {
+                const auto mesh=brickMeshes.value(cache);
+                if(mesh.isEmpty()) brickLayer->setFrame(next->bricks,next->width,next->height);
+                else brickGpuLayer->setFrame(mesh,next->width,next->height);
+                childBrickRevision=next->brickRevision;
+            }
         }
         if(gw!=next->width || gh!=next->height) { gw=next->width; gh=next->height; emit geometryChanged(); }
         { QMutexLocker lock(&mutex); scene=next; }
+        if(profile) {
+            auto state=packet["state"].toObject();
+            state["qtParseMs"]=parseMs; state["qtCacheMs"]=cacheMs;
+            state["qtCompileMs"]=timer.nsecsElapsed()/1e6-parseMs-cacheMs;
+            state["qtBrickPaintMs"]=brickLayer->paintMs(); state["qtFrontPaintMs"]=frontLayer->paintMs();
+            packet["state"]=state;
+        }
         packet.remove("ops"); packet.remove("caches");
         if(!error.isEmpty()) emit renderErrorChanged();
         update();
@@ -396,8 +536,12 @@ public:
 protected:
     void geometryChange(const QRectF &next,const QRectF &previous) override {
         QQuickPaintedItem::geometryChange(next,previous);
-        for(QQuickItem *item:{static_cast<QQuickItem*>(slowLayer),static_cast<QQuickItem*>(brickLayer),static_cast<QQuickItem*>(fastLayer),static_cast<QQuickItem*>(boltLayer),static_cast<QQuickItem*>(frontLayer)}) {
+        for(QQuickItem *item:{static_cast<QQuickItem*>(slowLayer),static_cast<QQuickItem*>(brickLayer),static_cast<QQuickItem*>(brickGpuLayer),static_cast<QQuickItem*>(fastLayer),static_cast<QQuickItem*>(boltLayer),static_cast<QQuickItem*>(frontLayer)}) {
             if(item) { item->setWidth(next.width()); item->setHeight(next.height()); }
+        }
+        if(activeBrickCache>=0 && window() && window()->rendererInterface()->graphicsApi()==QSGRendererInterface::OpenGL && !brickMeshes.value(activeBrickCache).isEmpty()) {
+            QVector<Vertex> mesh; compile(brickCommands.value(activeBrickCache),&mesh);
+            brickMeshes[activeBrickCache]=mesh; brickGpuLayer->setFrame(mesh,gw,gh);
         }
     }
 signals:

@@ -3222,7 +3222,7 @@ func stopAllMagicFeatureVoices() {
 
 func playMagicFeature(feature string, impactSpeed, pitchScale, hitX float64) {
 	if enableSounds {
-		nativeSound("magic", impactSpeed, pitchScale)
+		nativeFeatureSound(feature, impactSpeed, pitchScale)
 	}
 }
 

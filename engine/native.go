@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	js "physical/internal/qtbridge"
 	"strconv"
+	"strings"
 )
 
 //go:embed levels/level*.txt
@@ -46,6 +47,23 @@ func nativeSound(kind string, args ...float64) {
 	}
 	nativeSounds = append(nativeSounds, map[string]any{"kind": kind, "args": args})
 }
+func nativeFeatureSound(feature string, impactSpeed, pitchScale float64) {
+	if !nativeVisible {
+		return
+	}
+	event := map[string]any{"kind": "magic", "feature": strings.ToLower(strings.TrimSpace(feature)), "args": []float64{impactSpeed, pitchScale}}
+	if len(nativeSounds) < 12 {
+		nativeSounds = append(nativeSounds, event)
+		return
+	}
+	for i := len(nativeSounds) - 1; i >= 0; i-- {
+		if nativeSounds[i]["feature"] == nil && (nativeSounds[i]["kind"] == "brick" || nativeSounds[i]["kind"] == "magic") {
+			nativeSounds[i] = event
+			return
+		}
+	}
+}
+
 func nativeExportSVG(filename, svg string) bool {
 	if svg == "" {
 		return false

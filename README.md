@@ -78,9 +78,11 @@ SVG exports go to `~/Pictures/Physical/`. Replay stays in RAM.
   drawing packets in C++, batches debris into scene graph triangles, records
   other native QPainter commands, caches the static
   brick layer, and paints through an OpenGL framebuffer on the normal Omarchy
-  renderer. The software backend remains available for headless checks. Debris
-  keeps its original behind/in-front ordering; zapper glow strokes also use GPU
-  triangles instead of expensive raster glow strokes.
+  renderer. Rounded bricks, debris and zapper glow use GPU triangles; brick
+  contours are cached and their edge coverage follows display scale. Large
+  meshes are split into triangle chunks to preserve every brick. The
+  software painter remains available for headless checks. Debris keeps its
+  original behind/in-front ordering.
 - `native/pointerlock.cpp`: compositor pointer constraints and relative mouse input
   on the existing Qt Wayland connection, released on focus loss, resize, or menu.
 - `engine/`: the existing Go physics, level parser, powerups, replay, and SVG
@@ -93,9 +95,12 @@ The Qt display clock requests at most two outstanding simulation frames to avoid
 physics retains its 240 Hz fixed step. Hidden panels request no frames. The
 engine runs separately so a Go panic does not take down the shell process.
 
-Audio uses a pool of Qt SoundEffects. It preserves brick/magic samples and basic
-synthesized cues, but does not reproduce the web version's exact randomized
-pitch/filter, stereo positioning, or room-reverb graph. Mobile/browser-specific
+Audio uses one native output stream. Normal brick hits choose from all 21
+original samples randomly without immediately repeating a sample. Each activated
+power-up uses its own original cue; generic magic-brick hits keep a separate cue
+bank. Power-up cues take priority during dense collision bursts. Playback keeps
+the engine's pitch scale, including zapper hits. The web version's randomized
+pitch/filter, stereo positioning, and room-reverb graph are not reproduced. Mobile/browser-specific
 features (touch-mode selector, device tilt,
 and the browser Gamepad API) are not part of this desktop port. Standard Omarchy
 window controls handle moving and resizing. Fullscreen is available in the game;
@@ -114,6 +119,8 @@ hidden-window pause, progression, and a headless real-Quickshell UI smoke test.
 For a real display FPS measurement, run
 `PHYSICAL_TEST_WAYLAND=1 python3 tests/qml_smoke.py`; this opens a temporary test
 window for a few seconds and prints its painted frame rate.
+`PHYSICAL_TEST_WAYLAND=1 ./check` also verifies all 660 brick centers in a
+real GPU screenshot, covering dense fields that exceed 16-bit vertex ranges.
 
 `PHYSICAL_TEST_WAYLAND=1 python3 tests/performance.py` runs a three-minute
 level 26 benchmark with additional balls, magnets, and zapper effects. It reports
@@ -123,8 +130,14 @@ level, and the test uses private progress. Initial loading and restart samples
 are included in the overall minimum, with transitions marked in the log.
 Set `PHYSICAL_PERF_STRESS=0` for normal gameplay, `PHYSICAL_PERF_LEVEL=1` to
 choose another level, or `PHYSICAL_PERF_SECONDS=300` for a five-minute run.
+`PHYSICAL_PERF_RESTART_SECONDS=30` starts a fresh round every 30 seconds to
+repeat dense destruction instead of lingering on the last brick.
 `PHYSICAL_PERF_MUTE=1` isolates rendering and physics from audio playback. The
-benchmark stops and fails if Qt socket errors repeat.
+benchmark stops and fails on engine errors, closed windows, stalled rendering,
+or repeated Qt socket warnings.
+Set `PHYSICAL_RENDER_TIMINGS=1` to include native parsing, command compilation
+and painter timings. These timings add instrumentation and should be disabled
+for final FPS measurements.
 
 The UI test runs in a temporary folder using copies of the installed Omarchy
 components; it does not change the desktop theme or install the plugin.
