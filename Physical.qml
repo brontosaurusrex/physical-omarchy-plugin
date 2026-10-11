@@ -203,7 +203,7 @@ Item {
             id: card
             anchors.fill: parent
             color: panel.color
-            borderSpec: Border.surfaceSpec("menu", "border", Color.menu.border, Math.max(1, Style.normalBorderWidth))
+            borderSpec: panel.fullscreen ? Border.none() : Border.surfaceSpec("menu", "border", Color.menu.border, Math.max(1, Style.normalBorderWidth))
             radius: panel.fullscreen ? 0 : Style.cornerRadius
             FrameAnimation { running: root.animating; onTriggered: root.tick(); }
             Item {
