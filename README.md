@@ -11,8 +11,10 @@ output level and saves your preference between sessions.
 
 ## Install
 
-Requires current Omarchy with its Quickshell plugin API, Qt Quick (Qt 6.9+ for accelerated OpenGL drawing),
-Qt Multimedia, Qt development headers/tools, g++, pkg-config, and Go 1.23+ to build the engine. The build has no external Go dependencies.
+Requires current Omarchy with its Quickshell plugin API and Qt 6.9+ for accelerated OpenGL drawing.
+On Omarchy/Arch, `./install` offers to install any missing build and audio packages
+(`gcc`, `go`, `pkgconf`, `qt6-base`, `qt6-declarative`, and `qt6-multimedia`)
+before building. The build has no external Go dependencies.
 
 ```bash
 cd ~/source/physical-omarchy-plugin

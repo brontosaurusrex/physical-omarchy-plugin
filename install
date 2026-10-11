@@ -2,6 +2,47 @@
 set -euo pipefail
 project_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 target_dir="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/plugins/b.physical"
+
+# Build dependencies are not part of a normal Omarchy install. Offer to install
+# only the missing Arch packages before compiling the Qt module and Go engine.
+build_packages=(gcc go pkgconf qt6-base qt6-declarative qt6-multimedia)
+missing_packages=()
+if ! command -v pacman >/dev/null 2>&1; then
+  echo "This installer currently expects Omarchy/Arch Linux (pacman)." >&2
+  exit 1
+fi
+for package in "${build_packages[@]}"; do
+  if ! pacman -Qq "$package" >/dev/null 2>&1; then
+    missing_packages+=("$package")
+  fi
+done
+if ((${#missing_packages[@]})); then
+  echo "Physical needs these build/runtime packages: ${missing_packages[*]}"
+  if [[ ! -t 0 || ! -t 1 ]]; then
+    echo "Run this installer in a terminal to approve package installation, or install them with: omarchy pkg add ${missing_packages[*]}" >&2
+    exit 1
+  fi
+  read -r -p "Install missing packages now? [Y/n] " answer
+  case "$answer" in
+    n|N|no|NO)
+      echo "Install them with: omarchy pkg add ${missing_packages[*]}" >&2
+      exit 1
+      ;;
+  esac
+  omarchy pkg add "${missing_packages[@]}"
+fi
+
+for tool in g++ pkg-config go; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    echo "Required build tool '$tool' is still unavailable; install its Arch package and rerun ./install." >&2
+    exit 1
+  fi
+done
+if [[ ! -x /usr/lib/qt6/moc ]] || ! pkg-config --exists Qt6Qml Qt6Quick Qt6Gui; then
+  echo "Qt build tools are still unavailable; install qt6-base and qt6-declarative, then rerun ./install." >&2
+  exit 1
+fi
+
 "$project_dir/build"
 omarchy plugin validate "$project_dir"
 mkdir -p "$target_dir"
