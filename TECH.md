@@ -1,16 +1,17 @@
 # How Physical for Omarchy works
 
-Physical is a native Linux game packaged as an Omarchy shell plugin.
+Physical is a native Linux game packaged as an Omarchy shell plugin and a standalone Qt app.
 
 | Technology | What it does |
 | --- | --- |
 | **Go** (`engine/`) | Runs physics, collisions, levels, power-ups, replay, progress and SVG export in a separate process. Physics uses a fixed 240 Hz step; that is separate from display FPS. |
-| **Qt Quick / QML** (`Physical.qml`, menus and widgets) | Defines the window, controls, input handlers and bar button. QML describes the interface; small JavaScript functions connect its actions. |
+| **Qt Quick / QML** (`GameCore.qml`, windows, menus and widgets) | Defines the window, controls, input handlers and bar button. QML describes the interface; small JavaScript functions connect its actions. |
 | **C++ / Qt** (`native/renderer.cpp`) | Reads the engine's drawing packets, prepares geometry, caches brick shapes and draws the game through Qt's scene graph and QPainter. |
 | **GPU / OpenGL** | Draws batches of triangles for bricks, debris and zapper glow, blends their edges, and displays textures and the interface. |
 | **Qt Multimedia** (`native/audiomixer.h`, `native/audioroom.h`, `AudioPool.qml`) | Mixes stereo PCM samples and generated oscillator tones into one persistent output stream. Ordinary bricks pick random samples; power-ups have individual cues. Pitch, filters, gain, stereo pan and per-level room echoes run on the CPU. |
 | **Wayland** (`native/pointerlock.cpp`) | Talks to the compositor to capture the mouse and receive relative movement. Right click toggles capture; Esc exits replay, or closes the window and releases capture during live play. |
-| **Omarchy / Quickshell** | Loads the plugin, supplies the bar and themed controls, and hosts the Qt interface. |
+| **Omarchy / Quickshell** | Loads the plugin, supplies the bar and themed controls, and hosts its Qt window. The standalone app uses a regular Qt window and needs no Quickshell. |
+| **C++ / QProcess** (`native/engineprocess.h`) | Starts the Go engine and moves drawing/state packets over process pipes. Both hosts share this transport. |
 
 ## CPU versus GPU
 
@@ -65,14 +66,25 @@ and [graphics backends](https://doc.qt.io/qt-6/qtquick-visualcanvas-adaptations.
 
 ## Build and runtime
 
-`./build` compiles the Go executable and C++ Qt module. `./install` installs a
+`./build` compiles the Go executable, C++ Qt module and standalone Qt executable. `./install` installs a
 copy as `~/.config/omarchy/plugins/b.physical`; its installer offers missing
 Arch build/runtime packages. Qt, Quickshell and the graphics/audio drivers are
 needed at runtime. Go and the C++ compiler are needed to build from source,
-but not to execute an already-built game.
+but not to execute an already-built game. `./package` creates prebuilt bundles;
+`./install --prebuilt` installs a plugin bundle without compiling. The installer
+restarts the shell after copying the native module.
+
+The plugin's `Plugin.qml` uses a short Python setup process to update its local
+`native/qmldir` library path before loading `Physical.qml`. Quickshell cannot
+resolve this native library through its rewritten relative QML URLs. This step
+only writes the module path; it neither compiles nor downloads anything. The
+standalone app uses a normal relative Qt module definition. Bundles require
+compatible Qt and system libraries; see [PACKAGING.md](PACKAGING.md).
 
 The shell controls follow Omarchy's theme. The playfield keeps the game's
-original level palettes. Progress is stored separately from the web version.
+original level palettes. Standalone menus use Qt's desktop palette. Both hosts
+share `GameCore.qml`, render/audio modules and controls. Plugin and standalone
+progress files are separate from each other and from the web version.
 No browser, web server or WebAssembly runs the game.
 
 ## Audio and test limits

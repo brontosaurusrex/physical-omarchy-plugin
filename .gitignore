@@ -19,3 +19,7 @@ __pycache__/
 /bin/engine-profile-test
 /bin/engine-cpu.pprof
 /bin/audit-logs/
+/bin/physical
+/bin/physical.new
+/bin/engineprocess.moc
+/dist/

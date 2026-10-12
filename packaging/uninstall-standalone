@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+prefix=${PHYSICAL_PREFIX:-$HOME/.local}
+if [[ ${1:-} == --help ]]; then
+  echo 'Remove Physical from ~/.local; set PHYSICAL_PREFIX for another prefix. Progress and SVG exports are kept.'
+  exit 0
+fi
+[[ -z ${1:-} ]] || { echo 'Usage: ./uninstall' >&2; exit 1; }
+rm -f -- "$prefix/bin/physical" "$prefix/share/applications/io.github.brontosaurusrex.Physical.desktop" "$prefix/share/icons/hicolor/scalable/apps/io.github.brontosaurusrex.Physical.svg"
+rm -rf -- "$prefix/share/physical-app"
+if command -v update-desktop-database >/dev/null 2>&1 && [[ -d $prefix/share/applications ]]; then
+  update-desktop-database "$prefix/share/applications"
+fi
+echo 'Removed Physical. Saved progress and exports were kept.'

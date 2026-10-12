@@ -17,7 +17,7 @@
   ],
   "keepLoaded": true,
   "entryPoints": {
-    "panel": "Physical.qml",
+    "panel": "Plugin.qml",
     "barWidget": "BallWidget.qml"
   },
   "barWidget": {
@@ -26,5 +26,8 @@
     "category": "Games",
     "allowMultiple": false,
     "defaultSection": "center"
-  }
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/brontosaurusrex/physical-omarchy-plugin",
+  "repository": "https://github.com/brontosaurusrex/physical-omarchy-plugin"
 }

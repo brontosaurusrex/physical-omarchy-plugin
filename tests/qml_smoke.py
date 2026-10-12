@@ -82,6 +82,8 @@ ShellRoot {
                     if (!(wall.playing || findItem(game, "sound-wall-1").playing) || !(paddle.playing || findItem(game, "sound-paddle-1").playing)) { console.error("SMOKE contact clips not playing"); Qt.exit(1); }
                 }
                 game.toggleMenu();
+                var controls = findItem(game.contentView, "controls-table"), hint = findItem(game.contentView, "mouse-capture-hint");
+                if (!controls || !controls.visible || !hint || !hint.visible || String(hint.color) !== String(Color.foreground)) { console.error("SMOKE missing controls or unreadable mouse hint"); Qt.exit(1); return; }
                 var volume = findItem(game.contentView, "audio-volume");
                 if (!volume || volume.width < 50 || volume.height < 12 || volume.value !== 0.25) { console.error("SMOKE unusable volume slider"); Qt.exit(1); }
                 volume.value = 0.37; volume.moved();
@@ -121,8 +123,14 @@ with tempfile.TemporaryDirectory(prefix="physical-qml-test-") as directory:
     folder = pathlib.Path(directory)
     for name in ["Commons", "Ui"]:
         shutil.copytree(shell_dir / name, folder / name)
-    shutil.copytree(project, folder / "Port", ignore=shutil.ignore_patterns(".git", "__pycache__"))
-    (folder / "Port/native/qmldir").write_text("plugin physicalrenderer " + str(folder / "Port/native") + "\n")
+    shutil.copytree(project, folder / "Port", ignore=shutil.ignore_patterns(".git", "__pycache__", "dist"))
+    if os.environ.get("PHYSICAL_TEST_BOOTSTRAP"):
+        (folder / "Port/native/qmldir").write_text("plugin physicalrenderer /missing/physical/native\n")
+        harness = harness.replace("Port.Physical { id: game }", "Port.Plugin { id: plugin }\n    readonly property var game: plugin.game")
+        harness = harness.replace('Component.onCompleted: game.open("{}")', 'Component.onCompleted: plugin.open("{}")')
+        harness = harness.replace("root.rounds++;", "root.rounds++; if (!game) return;")
+    else:
+        (folder / "Port/native/qmldir").write_text("plugin physicalrenderer " + str(folder / "Port/native") + "\n")
     (folder / "shell.qml").write_text(harness)
     runtime = folder / "runtime"
     runtime.mkdir(mode=0o700)
@@ -140,6 +148,8 @@ with tempfile.TemporaryDirectory(prefix="physical-qml-test-") as directory:
         print((error.stdout or b"" ).decode(errors="replace"))
         raise
     if os.environ.get("PHYSICAL_TEST_DEBUG"): print(run.stdout)
+    if os.environ.get("PHYSICAL_TEST_BOOTSTRAP"):
+        assert (folder / "Port/native/qmldir").read_text() == "plugin physicalrenderer " + str(folder / "Port/native") + "\n", "Plugin did not repair the native module location"
     bad = [line for line in run.stdout.splitlines() if "WARN scene:" in line or "ERROR" in line or "QSoundEffect: Error decoding" in line]
     if run.returncode or "SMOKE PASS:" not in run.stdout or bad:
         print(run.stdout)

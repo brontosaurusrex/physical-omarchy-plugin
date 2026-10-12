@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls as QQC
 import QtQuick.Layouts
-import qs.Commons
+import "theme"
 
 Rectangle {
     id: root

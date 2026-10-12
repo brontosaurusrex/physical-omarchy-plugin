@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls as QQC
 import QtQuick.Layouts
-import qs.Commons
+import "theme"
 
 Rectangle {
     id: root
@@ -11,12 +11,60 @@ Rectangle {
     border.color: Color.menu.border
     border.width: 1
     radius: Style.cornerRadius
+    onVisibleChanged: if (visible && menuScroll.contentItem) menuScroll.contentItem.contentY = 0
+    readonly property var shortcutSections: [
+        {title: "Game", rows: [
+            ["Right click", "Capture / release mouse"],
+            ["Mouse", "Move paddle"],
+            ["←", "Move left"], ["→", "Move right"],
+            ["A", "Move left"], ["D", "Move right"],
+            ["Space", "Start, pause / resume"],
+            ["Enter", "Start, retry / continue"],
+            ["Left click", "Start, retry / continue"],
+            ["Space + F", "Toggle fullscreen"],
+            ["Page Up", "Previous unlocked level"],
+            ["Page Down", "Next unlocked level"],
+            ["S", "Toggle sound"],
+            ["?", "Open this menu"],
+            ["Esc", "Close game / exit replay"],
+            ["Q", "Close game (outside lab)"]
+        ]},
+        {title: "Extras", rows: [
+            ["O", "Automatic paddle (assisted)"],
+            ["R", "Toggle debris"],
+            ["M", "Toggle magnets (assisted)"],
+            ["Z", "Toggle zapper (assisted)"],
+            ["2", "Extra ball (assisted)"],
+            ["T", "Rescue ball (assisted)"],
+            ["P", "Cycle diagnostics"],
+            ["I", "Cycle diagnostics"],
+            ["F", "Show engine FPS"],
+            ["Shift + F", "Reset lowest FPS"],
+            ["U", "Unlock levels temporarily"],
+            ["E", "Open / close physics lab"]
+        ]},
+        {title: "Replay", rows: [
+            ["J", "Play backwards"],
+            ["K", "Enter / pause replay"],
+            ["L", "Play forwards"],
+            ["←", "Previous frame"],
+            ["→", "Next frame"],
+            ["Home", "First frame"],
+            ["End", "Last frame"],
+            ["Esc", "Return to game"],
+            ["Shift + K", "Return to game"],
+            ["V", "Export SVG"],
+            ["B", "Export SVG with trails"]
+        ]}
+    ]
     function key(key, code) { controller.closeMenu(); controller.shortcut(key, code); }
     Keys.onPressed: function(event) {
         if (event.key === Qt.Key_Escape) { if (!event.isAutoRepeat) root.controller.handleEscape(); event.accepted = true; }
     }
     MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons; }
     QQC.ScrollView {
+        id: menuScroll
+        objectName: "menu-scroll"
         anchors.fill: parent
         anchors.margins: 16
         clip: true
@@ -31,6 +79,15 @@ Rectangle {
                 GameButton { text: "×"; onClicked: root.controller.closeMenu(); }
             }
             Text { text: "Level " + root.controller.state.level + " / " + root.controller.state.levels; color: Color.muted; font.family: Style.fontFamily; font.pixelSize: Style.font.body; }
+            Text {
+                objectName: "mouse-capture-hint"
+                Layout.fillWidth: true
+                text: "Right click in the game to capture the mouse.\nRight click again to release it."
+                color: Color.foreground
+                font.family: Style.fontFamily
+                font.pixelSize: Style.font.body
+                wrapMode: Text.WordWrap
+            }
             RowLayout {
                 GameButton { objectName: "menu-playback"; text: root.controller.state.replay ? "Play replay" : (root.controller.state.ready ? "Start" : "Resume"); onClicked: { root.controller.closeMenu(); root.controller.togglePlayback(); } }
                 GameButton { text: "Retry"; onClicked: { root.controller.closeMenu(); root.controller.send({action: "restart"}); } }
@@ -71,22 +128,53 @@ Rectangle {
             RowLayout {
                 GameButton { objectName: "replay-toggle"; text: root.controller.state.replay ? "Exit replay" : "Replay"; onClicked: { if (root.controller.state.replay) { root.controller.closeMenu(); root.controller.send({action:"replay-exit"}); } else root.key("k", "KeyK"); } }
                 GameButton { objectName: "toggle-fps"; enabled: !root.controller.state.replay; text: "FPS"; onClicked: root.controller.shortcut("f", "KeyF"); }
-                GameButton { text: "Controls"; selected: root.controller.helpVisible; onClicked: root.controller.helpVisible = !root.controller.helpVisible; }
+            }
+            Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Color.menu.border; }
+            ColumnLayout {
+                objectName: "controls-table"
+                Layout.fillWidth: true
+                spacing: Style.space(12)
+                Text { text: "Controls"; color: Color.foreground; font.family: Style.fontFamily; font.pixelSize: Style.font.subtitle; font.bold: true; }
+                Repeater {
+                    model: root.shortcutSections
+                    delegate: ColumnLayout {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        spacing: Style.space(6)
+                        Text { text: modelData.title; color: Color.accent; font.family: Style.fontFamily; font.pixelSize: Style.font.bodySmall; font.bold: true; }
+                        Repeater {
+                            model: modelData.rows
+                            delegate: RowLayout {
+                                required property var modelData
+                                Layout.fillWidth: true
+                                spacing: Style.space(12)
+                                Text {
+                                    text: modelData[0]
+                                    Layout.preferredWidth: Math.min(Style.space(120), root.width * 0.35)
+                                    Layout.alignment: Qt.AlignTop
+                                    color: Color.foreground
+                                    font.family: Style.fontFamily
+                                    font.pixelSize: Style.font.bodySmall
+                                    font.bold: true
+                                    wrapMode: Text.WordWrap
+                                }
+                                Text {
+                                    text: modelData[1]
+                                    Layout.fillWidth: true
+                                    color: Color.foreground
+                                    font.family: Style.fontFamily
+                                    font.pixelSize: Style.font.bodySmall
+                                    wrapMode: Text.WordWrap
+                                }
+                            }
+                        }
+                    }
+                }
             }
             Text {
                 Layout.fillWidth: true
-                visible: root.controller.helpVisible
-                text: "Mouse / ← → / A D   Move paddle\nRight click   Capture / release mouse\nSpace / Enter / click   Start or continue\nSpace   Pause / resume\nSpace + F   Fullscreen\nPage Up / Down   Unlocked levels\nO   Automatic paddle (assisted)\nR   Debris    S   Sound\nM / Z   Magnets / zapper    2   Extra ball    T   Rescue\nP / I   Diagnostics    F   Engine FPS\nShift + F   Reset lowest FPS    U   Temporary level unlock\nE   Physics lab\n\nJ / K / L   Reverse / pause / forward replay\n← → / Home / End   Scrub replay\nShift + K / Exit replay button   Return to game\nEsc   Exit replay; otherwise close window and release mouse\nV / B   Export SVG / SVG with trails\n\n?   Controls    Q   Close (outside lab)\nSwitching windows pauses the game."
+                text: root.controller.state.replay ? "Replay " + (root.controller.state.replayFrame + 1) + " / " + root.controller.state.replayFrames + " · " + root.controller.state.replaySpeed + "×" : "Switching windows pauses the game."
                 color: Color.foreground
-                font.family: Style.fontFamily
-                font.pixelSize: Style.font.bodySmall
-                lineHeight: 1.3
-                wrapMode: Text.WordWrap
-            }
-            Text {
-                Layout.fillWidth: true
-                text: root.controller.state.replay ? "Replay " + (root.controller.state.replayFrame + 1) + " / " + root.controller.state.replayFrames + " · " + root.controller.state.replaySpeed + "×" : "Right click captures the mouse · ? shows controls"
-                color: Color.muted
                 font.family: Style.fontFamily
                 font.pixelSize: Style.font.bodySmall
                 wrapMode: Text.WordWrap

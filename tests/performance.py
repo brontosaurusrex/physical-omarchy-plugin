@@ -103,7 +103,7 @@ with tempfile.TemporaryDirectory(prefix="physical-qml-test-") as directory:
     folder = pathlib.Path(directory)
     for name in ["Commons", "Ui"]:
         shutil.copytree(shell_dir / name, folder / name)
-    shutil.copytree(project, folder / "Port", ignore=shutil.ignore_patterns(".git", "__pycache__"))
+    shutil.copytree(project, folder / "Port", ignore=shutil.ignore_patterns(".git", "__pycache__", "dist"))
     (folder / "Port/native/qmldir").write_text("plugin physicalrenderer " + str(folder / "Port/native") + "\n")
     (folder / "shell.qml").write_text(harness)
     runtime = folder / "runtime"

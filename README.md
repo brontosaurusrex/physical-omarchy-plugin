@@ -1,13 +1,14 @@
 # Physical for Omarchy
 
-A native Omarchy shell plugin: Go runs Physical's physics engine as a separate
+An Omarchy shell plugin and standalone Qt Linux app. Go runs Physical's physics engine as a separate
 native process; Qt Quick/QML draws the game and provides the controls. No browser,
 webview, WebAssembly, or web server is needed at runtime.
 
 The controls follow Omarchy's active colors, fonts, spacing, and window rounding.
 The playfield, effects, replay, and SVG exports retain Physical's original
 per-level palettes and game font. Pause, fullscreen, and menu buttons sit above
-the playfield; settings and keyboard help live in the menu. Audio defaults to 25%
+the playfield; settings and a keyboard controls table are shown immediately in the menu.
+The right-click mouse capture hint appears near the top, using the normal text color. Audio defaults to 25%
 and saves your preference between sessions. A single native audio stream mixes
 preloaded samples and generated collision tones, avoiding stream restarts during dense effect bursts.
 The initial window is limited to 90% of the display width and height, keeps the
@@ -29,8 +30,8 @@ cd ~/source/physical-omarchy-plugin
 
 This installs a copy into `~/.config/omarchy/plugins/b.physical`, rescans plugins,
 and enables a solid foreground-colored ball button in the center section of the Omarchy bar. Re-run `./install`
-after editing the source. After changing the compiled renderer, also run
-`omarchy restart shell` so Qt loads the new native module. Omarchy does not accept
+after editing the source. The installer restarts the shell so Qt loads the
+new native module; this resets an active game and RAM replay. Omarchy does not accept
 symlinked plugin packages.
 
 ```bash
@@ -41,6 +42,23 @@ omarchy plugin disable b.physical
 Closing the panel retains the game and RAM replay, pauses it, and stops the frame
 clock and sounds. Switching to another window pauses gameplay. Reopening requires
 an explicit resume. A shell restart resets the live game and RAM replay.
+
+## Standalone app and private-test bundles
+
+After `./build`, run `./bin/physical` for a native Qt window without Omarchy or
+Quickshell. The standalone controls use Qt's desktop palette; game colors stay
+with the original level palettes. Your window manager handles placement and tiling.
+
+`./package` creates two archives in `dist/`: an Omarchy plugin with compiled
+runtime files and source, and a standalone Linux app. Extract the Omarchy bundle
+and run `./install --prebuilt` to install without Go or a C++ compiler. Extract
+the standalone bundle and run `./bin/physical` or `./install` for a user install
+with a white-ball launcher icon. These bundles need compatible Qt/system libraries.
+
+See [PACKAGING.md](PACKAGING.md) for transfer, installation, compatibility,
+uninstall and the later marketplace publication steps. Packaging does not change
+repository visibility or publish anything; keep the repository private until
+another machine has been tested.
 
 ## Controls
 
@@ -76,7 +94,9 @@ sliders. Copy settings exports the original configuration text to the clipboard.
 ## Data
 
 Progression, records, and debris preference are stored separately from the web game:
-`~/.local/share/physical-omarchy/progress.json` (or under `XDG_DATA_HOME`).
+`~/.local/share/physical-omarchy/progress.json` for the plugin, and
+`~/.local/share/physical/progress.json` for the standalone app (or under
+`XDG_DATA_HOME`). `PHYSICAL_STATE_PATH` overrides either path.
 SVG exports go to `~/Pictures/Physical/`. Replay stays in RAM.
 
 ## Architecture
@@ -84,7 +104,11 @@ SVG exports go to `~/Pictures/Physical/`. Replay stays in RAM.
 See [TECH.md](TECH.md) for a short explanation of the stack, CPU/GPU work and
 graphics compatibility.
 
-- `Physical.qml`: plugin lifecycle, floating window, input, theme, native process.
+- `Plugin.qml`: prepares the local native-library path before loading the plugin.
+- `Physical.qml`: Omarchy lifecycle, floating window and live theme integration.
+- `Standalone.qml` / `standalone/main.cpp`: independent Qt window and executable.
+- `GameCore.qml`: shared gameplay UI, input, menus and engine communication.
+- `native/engineprocess.h`: shared native process transport and clipboard helper.
 - `BallWidget.qml`: Omarchy bar integration.
 - `GameCanvas.qml` / `native/renderer.cpp`: a compiled Qt drawing module. It parses
   drawing packets in C++ and draws rounded bricks, debris and zapper glow
@@ -127,7 +151,7 @@ Magnetic debris uses direct brick-grid cell lookup to reduce engine CPU work.
 Regression tests compare its results with the original map lookup; the current
 audit records a controlled comparison on levels 23, 26 and 27.
 
-The latest installed build completed a **15-minute** stress test on Intel HD
+The build audited on 2026-10-12 completed a **15-minute** stress test on Intel HD
 Graphics 520, cycling levels 23, 26 and 27 with sound and dense effects enabled.
 It averaged **59.6 painted FPS**, with a lowest gameplay sample of **53.8 FPS**
 and no detected crash or freeze. The direct-grid optimization reduced engine
@@ -142,6 +166,12 @@ and the browser Gamepad API) are not part of this desktop port. Standard Omarchy
 window controls handle moving and resizing. Fullscreen is available in the game;
 right click captures the mouse through Wayland, and Escape exits replay or closes the live window and releases capture.
 
+## License
+
+Code is [MIT](LICENSE). Sound assets, including original recordings and generated
+clips, are [CC0 1.0](sounds/LICENSE). The bundled font keeps its
+[SIL Open Font License](fonts/LICENCE.md).
+
 ## Validation
 
 ```bash
@@ -153,6 +183,10 @@ collision/buffer regressions, 3,000 magnetic-debris grid comparisons, native
 audio/room PCM checks, sample-bank hashes, all 33 levels, live
 level palettes, saved volume, native physics, replay and SVG export, the native tuner,
 hidden-window pause, progression, and a real-Quickshell UI smoke test plus 60 control checks through Qt input.
+`python3 tests/standalone.py` checks the independent Qt host with isolated progress.
+`PHYSICAL_TEST_BOOTSTRAP=1 python3 tests/qml_smoke.py` checks the plugin's native-library setup after relocation.
+`python3 tests/packaging.py` checks archives, checksums, prebuilt installation,
+standalone installation and progress-preserving removal.
 For a real display FPS measurement, run
 `PHYSICAL_TEST_WAYLAND=1 python3 tests/qml_smoke.py`; this opens a temporary test
 window for a few seconds and prints its painted frame rate.

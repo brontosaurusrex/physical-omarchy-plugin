@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+"""Build private-test bundles for Omarchy and standalone Qt Linux installations."""
+import argparse
+import datetime
+import hashlib
+import json
+import pathlib
+import platform
+import shutil
+import subprocess
+import tarfile
+
+project = pathlib.Path(__file__).resolve().parent
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--no-build", action="store_true", help="Package the existing local build (run ./build first).")
+args = parser.parse_args()
+if not args.no_build:
+    subprocess.run([str(project / "build")], check=True)
+for name in ["bin/physical", "bin/physical-engine", "native/libphysicalrenderer.so", "native/qmldir"]:
+    if not (project / name).is_file():
+        raise SystemExit(f"Missing {name}; run ./build first.")
+manifest = json.loads((project / "manifest.json").read_text())
+version, arch = manifest["version"], platform.machine()
+if any(char not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_" for char in version + arch):
+    raise SystemExit("Unsafe version or architecture in package filename")
+output = project / "dist"
+output.mkdir(exist_ok=True)
+qt = subprocess.check_output(["pkg-config", "--modversion", "Qt6Core"], text=True).strip()
+git_head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=project, text=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+if git_head.returncode == 0:
+    revision = git_head.stdout.strip()
+    dirty = bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=project, text=True).strip())
+else:
+    previous = json.loads((project / "BUILD-INFO.json").read_text()) if (project / "BUILD-INFO.json").is_file() else {}
+    revision, dirty = previous.get("source_revision"), None
+info = dict(version=version, architecture=arch, qt=qt, libc=platform.libc_ver(), source_revision=revision,
+            source_modified=dirty, built_at=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            repository=manifest["repository"], code_license="MIT", sound_license="CC0-1.0", font_license="OFL-1.1")
+qml = ["GameCore.qml", "GameCanvas.qml", "GameButton.qml", "HudButton.qml", "GameMenu.qml", "Tuner.qml", "AudioPool.qml"]
+
+def copy(source, destination):
+    path = project / source
+    if path.is_symlink() or (path.is_dir() and any(p.is_symlink() for p in path.rglob("*"))):
+        raise SystemExit(f"Refusing symlink in package: {source}")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if path.is_dir():
+        shutil.copytree(path, destination, dirs_exist_ok=True, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.so", "*.so.new", "qmldir") if source == "native" else shutil.ignore_patterns("__pycache__", "*.pyc"))
+    else:
+        shutil.copy2(path, destination)
+
+archives = []
+for kind in ["omarchy", "standalone"]:
+    name = f"physical{'-omarchy' if kind == 'omarchy' else ''}-{version}-linux-{arch}"
+    folder = output / name
+    if folder.exists():
+        shutil.rmtree(folder)
+    folder.mkdir()
+    assets = folder if kind == "omarchy" else folder / "share/physical-app"
+    assets.mkdir(parents=True, exist_ok=True)
+    for source in qml + ["theme", "sounds", "fonts"]:
+        copy(source, assets / source)
+    for source in ["LICENSE", "licenses", "README.md", "TECH.md", "UPSTREAM.md", "PACKAGING.md", "docs"]:
+        copy(source, folder / source)
+    for source in ["bin/physical-engine", "native/libphysicalrenderer.so", "native/qmldir"]:
+        copy(source, assets / source)
+    if kind == "omarchy":
+        for source in ["manifest.json", "Plugin.qml", "Physical.qml", "BarWidget.qml", "BallWidget.qml", "CanvasRenderer.js", "physical-window", "install", "build", "check", "package", "engine", "native", "standalone", "packaging", "Standalone.qml", "tests"]:
+            copy(source, folder / source)
+        # Source copy excludes built files; retain the runtime module above.
+        copy("bin/physical", folder / "bin/physical")
+        (folder / "native/qmldir").write_text("plugin physicalrenderer .\n")
+        subprocess.run(["omarchy", "plugin", "validate", str(folder)], check=True)
+    else:
+        copy("Standalone.qml", assets / "Standalone.qml")
+        (assets / "native/qmldir").write_text("plugin physicalrenderer .\n")
+        copy("bin/physical", folder / "bin/physical")
+        copy("packaging/physical.svg", assets / "packaging/physical.svg")
+        copy("packaging/physical.svg", folder / "share/icons/hicolor/scalable/apps/io.github.brontosaurusrex.Physical.svg")
+        copy("packaging/io.github.brontosaurusrex.Physical.desktop", folder / "share/applications/io.github.brontosaurusrex.Physical.desktop")
+        copy("packaging/install-standalone", folder / "install")
+        copy("packaging/uninstall-standalone", folder / "uninstall")
+        copy("packaging/README-standalone.md", folder / "README.md")
+        for document in ["UPSTREAM.md", "PACKAGING.md"]:
+            path = folder / document
+            path.write_text(path.read_text().replace("(sounds/", "(share/physical-app/sounds/").replace("(fonts/", "(share/physical-app/fonts/"))
+    (folder / "BUILD-INFO.json").write_text(json.dumps(dict(info, package=kind), indent=2) + "\n")
+    files = sorted(p for p in folder.rglob("*") if p.is_file() and not (kind == "omarchy" and p == folder / "native/qmldir"))
+    (folder / "SHA256SUMS").write_text("".join(f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.relative_to(folder)}\n" for p in files))
+    archive = output / (name + ".tar.gz")
+    with tarfile.open(archive, "w:gz") as tar:
+        tar.add(folder, arcname=name)
+    archives.append(archive)
+    print(f"Created {archive}")
+(output / "SHA256SUMS").write_text("".join(f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n" for p in archives))

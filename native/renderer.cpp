@@ -20,6 +20,7 @@
 #include <memory>
 #include "pointerlock.h"
 #include "audiomixer.h"
+#include "engineprocess.h"
 
 struct Vertex { float x,y; unsigned char r,g,b,a; };
 
@@ -552,7 +553,8 @@ class PhysicalRendererPlugin : public QQmlExtensionPlugin {
     Q_OBJECT
     Q_PLUGIN_METADATA(IID QQmlExtensionInterface_iid)
 public:
-    void registerTypes(const char *uri) override { qmlRegisterType<GameRenderer>(uri,1,0,"GameRenderer"); qmlRegisterType<PointerLock>(uri,1,0,"PointerLock"); qmlRegisterType<AudioMixer>(uri,1,0,"AudioMixer"); }
+    void registerTypes(const char *uri) override { qmlRegisterType<GameRenderer>(uri,1,0,"GameRenderer"); qmlRegisterType<PointerLock>(uri,1,0,"PointerLock"); qmlRegisterType<AudioMixer>(uri,1,0,"AudioMixer"); qmlRegisterType<EngineProcess>(uri,1,0,"EngineProcess"); }
 };
 #include "renderer.moc"
 #include "audiomixer.moc"
+#include "engineprocess.moc"

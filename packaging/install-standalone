@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -euo pipefail
+bundle_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+prefix=${PHYSICAL_PREFIX:-$HOME/.local}
+if [[ ${1:-} == --help ]]; then
+  echo 'Install to ~/.local; set PHYSICAL_PREFIX to choose another prefix. No build tools or root access required.'
+  exit 0
+fi
+[[ -z ${1:-} ]] || { echo 'Usage: ./install' >&2; exit 1; }
+[[ -x $bundle_dir/bin/physical && -f $bundle_dir/share/physical-app/Standalone.qml ]] || { echo 'Run this installer from an extracted standalone bundle.' >&2; exit 1; }
+(cd "$bundle_dir" && sha256sum --quiet -c SHA256SUMS)
+for binary in bin/physical share/physical-app/native/libphysicalrenderer.so; do
+  dependencies=$(ldd "$bundle_dir/$binary" 2>&1 || true)
+  if [[ $dependencies == *"not found"* ]]; then
+    echo 'Missing Qt 6 runtime libraries. On Arch/Omarchy: omarchy pkg add qt6-base qt6-declarative qt6-multimedia qt6-wayland' >&2
+    exit 1
+  fi
+done
+mkdir -p "$prefix/bin" "$prefix/share/physical-app" "$prefix/share/applications" "$prefix/share/icons/hicolor/scalable/apps"
+# Replace the executable atomically, including when an existing app is running.
+app_temp=$(mktemp "$prefix/bin/.physical.XXXXXX")
+trap 'rm -f -- "$app_temp"' EXIT
+cp -a "$bundle_dir/bin/physical" "$app_temp"
+mv -f -- "$app_temp" "$prefix/bin/physical"
+cp -a "$bundle_dir/share/physical-app/." "$prefix/share/physical-app/"
+cp -a "$bundle_dir/share/icons/hicolor/scalable/apps/io.github.brontosaurusrex.Physical.svg" "$prefix/share/icons/hicolor/scalable/apps/"
+# Desktop Exec uses its own escaping rules, rather than shell quoting.
+python3 - "$bundle_dir/share/applications/io.github.brontosaurusrex.Physical.desktop" "$prefix" <<'PY'
+import pathlib, sys
+source, prefix = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2]).resolve()
+executable = str(prefix / 'bin/physical')
+for char in ['\\', '"', '`', '$']:
+    executable = executable.replace(char, '\\' + char)
+executable = executable.replace('%', '%%')
+text = source.read_text().replace('Exec=physical', 'Exec="' + executable + '"')
+(prefix / 'share/applications/io.github.brontosaurusrex.Physical.desktop').write_text(text)
+PY
+if command -v update-desktop-database >/dev/null 2>&1; then
+  update-desktop-database "$prefix/share/applications"
+fi
+echo "Installed Physical at $prefix/bin/physical"
+echo 'Start it from your app launcher or run physical.'

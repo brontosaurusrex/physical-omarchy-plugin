@@ -3,9 +3,18 @@ set -euo pipefail
 project_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 target_dir="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/plugins/b.physical"
 
+prebuilt=false
+case "${1:-}" in
+  --prebuilt) prebuilt=true ;;
+  --help) echo 'Usage: ./install [--prebuilt]'; echo 'Build from source, or install an extracted bundle without compilers.'; exit 0 ;;
+  '') ;;
+  *) echo 'Usage: ./install [--prebuilt]' >&2; exit 1 ;;
+esac
+
 # Build dependencies are not part of a normal Omarchy install. Offer to install
 # only the missing Arch packages before compiling the Qt module and Go engine.
-build_packages=(gcc go pkgconf qt6-base qt6-declarative qt6-multimedia qt6-wayland wayland wayland-protocols)
+build_packages=(qt6-base qt6-declarative qt6-multimedia qt6-wayland wayland)
+if ! $prebuilt; then build_packages+=(gcc go pkgconf wayland-protocols); fi
 missing_packages=()
 if ! command -v pacman >/dev/null 2>&1; then
   echo "This installer currently expects Omarchy/Arch Linux (pacman)." >&2
@@ -17,7 +26,7 @@ for package in "${build_packages[@]}"; do
   fi
 done
 if ((${#missing_packages[@]})); then
-  echo "Physical needs these build/runtime packages: ${missing_packages[*]}"
+  echo "Physical needs these packages: ${missing_packages[*]}"
   if [[ ! -t 0 || ! -t 1 ]]; then
     echo "Run this installer in a terminal to approve package installation, or install them with: omarchy pkg add ${missing_packages[*]}" >&2
     exit 1
@@ -32,24 +41,45 @@ if ((${#missing_packages[@]})); then
   omarchy pkg add "${missing_packages[@]}"
 fi
 
-for tool in g++ pkg-config go wayland-scanner; do
-  if ! command -v "$tool" >/dev/null 2>&1; then
-    echo "Required build tool '$tool' is still unavailable; install its Arch package and rerun ./install." >&2
+if $prebuilt; then
+  [[ -x $project_dir/bin/physical-engine && -f $project_dir/native/libphysicalrenderer.so ]] || { echo 'Missing runtime binaries; use ./install to build from source.' >&2; exit 1; }
+  if [[ -f $project_dir/SHA256SUMS ]]; then
+    (cd "$project_dir" && sha256sum --quiet -c SHA256SUMS)
+  fi
+  if [[ -f $project_dir/BUILD-INFO.json ]]; then
+    [[ $(jq -r .architecture "$project_dir/BUILD-INFO.json") == $(uname -m) ]] || { echo 'This bundle is for a different CPU architecture; build from source.' >&2; exit 1; }
+    built_qt=$(jq -r .qt "$project_dir/BUILD-INFO.json")
+    runtime_qt=$(/usr/lib/qt6/bin/qtpaths --qt-version)
+    if [[ ${built_qt%.*} != ${runtime_qt%.*} ]]; then
+      echo "Bundle built with Qt $built_qt; this machine has Qt $runtime_qt. Use ./install to build against your Qt version." >&2
+      exit 1
+    fi
+  fi
+  dependencies=$(ldd "$project_dir/native/libphysicalrenderer.so" 2>&1 || true)
+  if [[ $dependencies == *"not found"* ]]; then
+    echo 'Missing runtime libraries; build from source or install the compatible Qt runtime.' >&2
     exit 1
   fi
-done
-if [[ ! -x /usr/lib/qt6/moc ]] || ! pkg-config --exists Qt6Qml Qt6Quick Qt6Gui Qt6Multimedia; then
-  echo "Qt build tools are still unavailable; install qt6-base, qt6-declarative and qt6-multimedia, then rerun ./install." >&2
-  exit 1
+else
+  for tool in g++ pkg-config go wayland-scanner; do
+    if ! command -v "$tool" >/dev/null 2>&1; then
+      echo "Required build tool '$tool' is still unavailable; install its Arch package and rerun ./install." >&2
+      exit 1
+    fi
+  done
+  if [[ ! -x /usr/lib/qt6/moc ]] || ! pkg-config --exists Qt6Qml Qt6Quick Qt6Gui Qt6Multimedia; then
+    echo "Qt build tools are still unavailable; install qt6-base, qt6-declarative and qt6-multimedia, then rerun ./install." >&2
+    exit 1
+  fi
+  "$project_dir/build"
 fi
-
-"$project_dir/build"
 omarchy plugin validate "$project_dir"
 mkdir -p "$target_dir"
 if [[ -f $target_dir/manifest.json ]] && [[ $(jq -r .id "$target_dir/manifest.json") != b.physical ]]; then
   echo "Refusing to overwrite a different plugin at $target_dir" >&2
   exit 1
 fi
+if [[ $project_dir != "$(cd -- "$target_dir" && pwd)" ]]; then
 # Replace the executable atomically so reinstalling works while it is running.
 mkdir -p "$target_dir/bin"
 engine_temp=$(mktemp "$target_dir/bin/.physical-engine.XXXXXX")
@@ -57,15 +87,18 @@ trap 'rm -f -- "$engine_temp"' EXIT
 cp -a "$project_dir/bin/physical-engine" "$engine_temp"
 mv -f -- "$engine_temp" "$target_dir/bin/physical-engine"
 # Install a copy: Omarchy rejects symlinks in plugin packages.
-for entry in manifest.json Physical.qml BarWidget.qml BallWidget.qml GameButton.qml HudButton.qml GameMenu.qml GameCanvas.qml Tuner.qml AudioPool.qml CanvasRenderer.js physical-window sounds fonts; do
+for entry in manifest.json Plugin.qml Physical.qml GameCore.qml BarWidget.qml BallWidget.qml GameButton.qml HudButton.qml GameMenu.qml GameCanvas.qml Tuner.qml AudioPool.qml CanvasRenderer.js physical-window theme sounds fonts LICENSE licenses; do
   cp -a "$project_dir/$entry" "$target_dir/"
 done
 mkdir -p "$target_dir/native"
 renderer_temp=$(mktemp "$target_dir/native/.physicalrenderer.XXXXXX")
 cp -a "$project_dir/native/libphysicalrenderer.so" "$renderer_temp"
 mv -f -- "$renderer_temp" "$target_dir/native/libphysicalrenderer.so"
+cp -a "$project_dir/native/setup-module.py" "$target_dir/native/setup-module.py"
 printf 'plugin physicalrenderer %s/native\n' "$target_dir" > "$target_dir/native/qmldir"
+fi
 omarchy plugin validate "$target_dir"
 omarchy-shell shell rescanPlugins
 omarchy plugin enable b.physical
+omarchy restart shell
 echo "Installed Physical. Open it from the white ball icon or: omarchy-shell shell toggle b.physical"

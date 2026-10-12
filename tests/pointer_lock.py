@@ -72,7 +72,7 @@ with tempfile.TemporaryDirectory(prefix='physical-pointer-test-') as directory:
     folder = pathlib.Path(directory)
     for name in ['Commons', 'Ui']:
         shutil.copytree(shell / name, folder / name)
-    shutil.copytree(project, folder / 'Port', ignore=shutil.ignore_patterns('.git', '__pycache__'))
+    shutil.copytree(project, folder / 'Port', ignore=shutil.ignore_patterns('.git', '__pycache__', 'dist'))
     (folder / 'Port/native/qmldir').write_text('plugin physicalrenderer ' + str(folder / 'Port/native') + '\n')
     (folder / 'shell.qml').write_text(harness)
     env = dict(os.environ, PHYSICAL_TESTING='1', PHYSICAL_STATE_PATH=str(folder / 'progress.json'))

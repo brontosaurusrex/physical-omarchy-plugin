@@ -24,14 +24,25 @@ ShellRoot {
         for(var child of item.children || []) { var found=find(child,name); if(found) return found; }
         return null;
     }
-    function click(name) { var button=find(game.contentView,name); input.mouseClick(button,button.width/2,button.height/2); }
+    function click(name) {
+        var button=find(game.contentView,name), scroll=find(game.contentView,"menu-scroll");
+        var ancestor=button.parent, inMenu=false;
+        while(ancestor) { if(ancestor===scroll) { inMenu=true; break; } ancestor=ancestor.parent; }
+        if(inMenu) {
+            var viewport=scroll.contentItem, pos=button.mapToItem(viewport,0,0);
+            if(pos.y<0) viewport.contentY=Math.max(0,viewport.contentY+pos.y);
+            else if(pos.y+button.height>viewport.height) viewport.contentY+=pos.y+button.height-viewport.height;
+            input.wait(20);
+        }
+        input.mouseClick(button,button.width/2,button.height/2);
+    }
     function tap(key, modifiers) { input.keyClick(key, modifiers || Qt.NoModifier); }
     function same(field) { return game.state[field] === before[field]; }
     function changed(field) { return !same(field); }
     function buildCases() { cases = [
         {name:"Ready sound", run:()=>tap(Qt.Key_S), check:()=>changed("sound")},
         {name:"Ready debris", run:()=>tap(Qt.Key_R), check:()=>changed("debrisMaster")},
-        {name:"Enter start", run:()=>tap(Qt.Key_Return), check:()=>!game.state.ready && !game.state.paused},
+        {name:"Enter start", run:()=>tap(Qt.Key_Return), check:()=>!game.state.ready && !game.state.paused, finish:()=>game.send({action:"pointer",x:game.gameView.gameWidth/2,y:game.gameView.gameHeight/2})},
         {name:"A paddle", run:()=>input.keyPress(Qt.Key_A), check:()=>game.state.paddleX < before.paddleX, finish:()=>input.keyRelease(Qt.Key_A)},
         {name:"D paddle", run:()=>input.keyPress(Qt.Key_D), check:()=>game.state.paddleX > before.paddleX, finish:()=>input.keyRelease(Qt.Key_D)},
         {name:"Left paddle", run:()=>input.keyPress(Qt.Key_Left), check:()=>game.state.paddleX < before.paddleX, finish:()=>input.keyRelease(Qt.Key_Left)},
@@ -66,7 +77,7 @@ ShellRoot {
         {name:"Replay menu guards",run:()=>{},check:()=>["debris","auto","lab","fps"].every(name=>!find(game.contentView,"toggle-"+name).enabled)},
         {name:"Replay menu playback",run:()=>click("menu-playback"),check:()=>!game.menuVisible && game.state.replayDirection===1},
         {name:"Replay menu reopen",run:()=>game.toggleMenu(),check:()=>game.menuVisible},
-        {name:"Replay menu exit", run:()=>{ var button=find(game.contentView,"replay-toggle"); input.mouseClick(button,button.width/2,button.height/2); }, check:()=>!game.state.replay && !game.menuVisible},
+        {name:"Replay menu exit", run:()=>click("replay-toggle"), check:()=>!game.state.replay && !game.menuVisible},
         {name:"Replay Escape enter", run:()=>tap(Qt.Key_K), check:()=>game.state.replay},
         {name:"Replay Escape return", run:()=>tap(Qt.Key_Escape), check:()=>!game.state.replay && game.opened && game.windowView.visible},
         {name:"Replay menu Escape enter", run:()=>tap(Qt.Key_K), check:()=>game.state.replay},
@@ -82,7 +93,7 @@ ShellRoot {
         {name:"Unlock", run:()=>tap(Qt.Key_U), check:()=>game.state.unlocked},
         {name:"Page down", run:()=>tap(Qt.Key_PageDown), check:()=>game.state.level===2},
         {name:"Page up", run:()=>tap(Qt.Key_PageUp), check:()=>game.state.level===1},
-        {name:"Help", run:()=>tap(Qt.Key_Question), check:()=>game.menuVisible && game.helpVisible},
+        {name:"Controls menu", run:()=>tap(Qt.Key_Question), check:()=>game.menuVisible && find(game.contentView,"controls-table").visible},
         {name:"Menu sound", run:()=>game.send({action:"toggle-sound"}), check:()=>changed("sound")},
         {name:"Menu Escape", run:()=>tap(Qt.Key_Escape), check:()=>!game.opened, finish:()=>game.open("{}")},
         {name:"Reopened Space", run:()=>tap(Qt.Key_Space), check:()=>!game.state.ready && !game.state.paused},
@@ -109,7 +120,7 @@ with tempfile.TemporaryDirectory(prefix="physical-qml-test-") as directory:
     folder = pathlib.Path(directory)
     for name in ["Commons", "Ui"]:
         shutil.copytree(shell_dir / name, folder / name)
-    shutil.copytree(project, folder / "Port", ignore=shutil.ignore_patterns(".git", "__pycache__"))
+    shutil.copytree(project, folder / "Port", ignore=shutil.ignore_patterns(".git", "__pycache__", "dist"))
     (folder / "Port/native/qmldir").write_text("plugin physicalrenderer " + str(folder / "Port/native") + "\n")
     (folder / "shell.qml").write_text(harness)
     runtime = folder / "runtime"

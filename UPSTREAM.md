@@ -20,8 +20,10 @@ Magnetic debris uses an additional direct cell array alongside the original
 brick map. It preserves cell contents and lookup order; regression tests compare
 its targets with the map path before and after brick destruction.
 
-No license was declared in the original source checkout. This port does not
-invent a new license for the game or its assets.
+The original checkout did not declare a license. The author has now licensed
+this port's code under [MIT](LICENSE) and dedicated the bundled sounds to the
+public domain under [CC0 1.0](sounds/LICENSE). The bundled font retains its
+[original SIL Open Font License](fonts/LICENCE.md).
 
 The 2026-10-12 audit compares audio against that original checkout's
 `dev/main.go`, `config.go` and runtime sound directories. The port now decodes

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Physical
+Comment=Native physics brick breaker
+Exec=physical
+Icon=io.github.brontosaurusrex.Physical
+Terminal=false
+Categories=Game;ArcadeGame;
+StartupWMClass=io.github.brontosaurusrex.Physical
