@@ -31,9 +31,9 @@ cd ~/source/physical-omarchy-plugin
 This installs a copy into `~/.config/omarchy/plugins/b.physical`, restarts the shell,
 waits for plugin discovery, and enables a solid foreground-colored ball button
 in the center section of the Omarchy bar. Re-run `./install` after editing the
-source. Restarting loads the new native module and resets an active game and
-RAM replay. Omarchy does not accept
-symlinked plugin packages.
+source. The ball uses a smooth circle path and Omarchy's active color while
+the game window is open. Restarting loads the new native module and resets an
+active game and RAM replay. Omarchy does not accept symlinked plugin packages.
 
 ```bash
 omarchy-shell shell toggle b.physical

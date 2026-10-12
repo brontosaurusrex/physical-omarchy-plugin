@@ -13,6 +13,12 @@ Physical is a native Linux game packaged as an Omarchy shell plugin and a standa
 | **Omarchy / Quickshell** | Loads the plugin, supplies the bar and themed controls, and hosts its Qt window. The standalone app uses a regular Qt window and needs no Quickshell. |
 | **C++ / QProcess** (`native/engineprocess.h`) | Starts the Go engine and moves drawing/state packets over process pipes. Both hosts share this transport. |
 
+The bar ball in `BallWidget.qml` uses a circular path with Qt Quick Shapes'
+curve renderer for smooth edges at its small icon size. Its color follows the
+bar foreground when closed and the bar's active color while the game window is
+open. The scoped shell's `isPluginOpen` API supplies that state; a paused engine
+retained after closing does not keep the icon highlighted.
+
 ## CPU versus GPU
 
 The **CPU** computes ball movement, collisions, effects and game state. It also
