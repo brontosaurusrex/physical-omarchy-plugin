@@ -49,7 +49,8 @@ an explicit resume. A shell restart resets the live game and RAM replay.
 | Right click | Capture/release mouse on Wayland |
 | Space + F / fullscreen button | Toggle fullscreen |
 | Space / Enter / click | Start, retry after game over, or advance after a clear |
-| Space / Escape | Pause; Escape first releases mouse or exits fullscreen |
+| Space | Pause/resume |
+| Escape | Close window, release mouse and pause game |
 | Page Up / Page Down | Navigate unlocked levels |
 | O | Automatic paddle; marks the run assisted |
 | R / S | Toggle debris / sound |
@@ -107,7 +108,7 @@ pitch/filter, stereo positioning, and room-reverb graph are not reproduced. Mobi
 features (touch-mode selector, device tilt,
 and the browser Gamepad API) are not part of this desktop port. Standard Omarchy
 window controls handle moving and resizing. Fullscreen is available in the game;
-right click captures the mouse through Wayland, and Escape releases it.
+right click captures the mouse through Wayland, and Escape closes the window and releases it.
 
 ## Validation
 

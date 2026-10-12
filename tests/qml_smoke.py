@@ -51,7 +51,8 @@ ShellRoot {
             } else if (root.phase === 21 && Date.now() - root.startTime > 300) {
                 if (Quickshell.env("PHYSICAL_TEST_WAYLAND") && game.windowView.width < game.windowView.screen.width - 2) { console.error("SMOKE fullscreen geometry failed"); Qt.exit(1); return; }
                 game.pressKey({key: Qt.Key_Escape, isAutoRepeat: false});
-                if (game.fullscreen) { console.error("SMOKE fullscreen Escape failed"); Qt.exit(1); return; }
+                if (game.opened || game.fullscreen || game.mouseCapture.requested) { console.error("SMOKE Escape did not close fullscreen game"); Qt.exit(1); return; }
+                game.open("{}");
                 root.startTime = Date.now(); root.phase = 22;
             } else if (root.phase === 22 && Date.now() - root.startTime > 300) {
                 if (game.windowView.width > game.defaultWindowWidth + 2 || game.windowView.height > game.defaultWindowHeight + 2) { console.error("SMOKE fullscreen restore size failed"); Qt.exit(1); return; }

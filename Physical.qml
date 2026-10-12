@@ -55,11 +55,7 @@ Item {
         if (event.key === Qt.Key_Space) { if (!event.isAutoRepeat) { spaceHeld = true; fullscreenChord = false; } return; }
         if (event.key === Qt.Key_F && spaceHeld) { if (!event.isAutoRepeat) { toggleFullscreen(); fullscreenChord = true; } return; }
         if (event.key === Qt.Key_Question) { if (!menuVisible) toggleMenu(); helpVisible = !helpVisible; return; }
-        if (event.key === Qt.Key_Escape) {
-            if (pointerLock.requested) { pointerLock.release(); return; }
-            if (menuVisible) { closeMenu(); return; }
-            if (panel.fullscreen) { toggleFullscreen(); return; }
-        }
+        if (event.key === Qt.Key_Escape) { dismiss(); return; }
         if (event.key === Qt.Key_Q && !state.editor) { dismiss(); return; }
         if (menuVisible) return;
         send({ action: "key", key: keyName(event), code: keyName(event), down: true, repeat: event.isAutoRepeat, shift: (event.modifiers & Qt.ShiftModifier) !== 0 });
@@ -215,6 +211,7 @@ Item {
             color: panel.color
             borderSpec: panel.fullscreen ? Border.none() : Border.surfaceSpec("menu", "border", Color.menu.border, Math.max(1, Style.normalBorderWidth))
             radius: panel.fullscreen ? 0 : Style.cornerRadius
+            Shortcut { sequence: "Escape"; context: Qt.WindowShortcut; enabled: root.opened; autoRepeat: false; onActivated: root.dismiss(); }
             FrameAnimation { running: root.animating; onTriggered: root.tick(); }
             Item {
                 id: playArea
@@ -236,6 +233,7 @@ Item {
                         onRelativeMotion: function(dx, dy) { root.send({action: "relative-pointer", x: dx * canvas.gameWidth / gameInput.width}); }
                     }
                     MouseArea {
+                        objectName: "physicalPointerInput"
                         anchors.fill: parent
                         hoverEnabled: true
                         acceptedButtons: Qt.LeftButton | Qt.RightButton

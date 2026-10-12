@@ -13,7 +13,7 @@ Rectangle {
     radius: Style.cornerRadius
     function key(key, code) { controller.closeMenu(); controller.shortcut(key, code); }
     Keys.onPressed: function(event) {
-        if (event.key === Qt.Key_Escape) { root.controller.closeMenu(); event.accepted = true; }
+        if (event.key === Qt.Key_Escape) { root.controller.dismiss(); event.accepted = true; }
     }
     MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons; }
     QQC.ScrollView {
