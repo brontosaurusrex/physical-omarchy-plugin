@@ -246,10 +246,17 @@ Item {
                         }
                         onPressed: function(mouse) {
                             gameInput.forceActiveFocus();
-                            if (mouse.button === Qt.RightButton) {
+                            if (mouse.button === Qt.LeftButton) root.send({ action: "pointer", down: true, x: mouse.x * canvas.gameWidth / width, y: mouse.y * canvas.gameHeight / height });
+                        }
+                        onClicked: function(mouse) {
+                            if (mouse.button !== Qt.RightButton) return;
+                            // Finish the button grab and focus change before requesting
+                            // compositor capture, especially on the first click.
+                            Qt.callLater(function() {
+                                if (!root.opened || root.menuVisible) return;
                                 if (pointerLock.requested) pointerLock.release();
                                 else if (!pointerLock.lock()) { root.notice = "Mouse capture unavailable"; noticeTimer.restart(); }
-                            } else root.send({ action: "pointer", down: true, x: mouse.x * canvas.gameWidth / width, y: mouse.y * canvas.gameHeight / height });
+                            });
                         }
                     }
                     Keys.onPressed: function(event) { root.pressKey(event); event.accepted = true; }

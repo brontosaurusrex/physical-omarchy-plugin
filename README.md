@@ -124,7 +124,9 @@ For a real display FPS measurement, run
 `PHYSICAL_TEST_WAYLAND=1 python3 tests/qml_smoke.py`; this opens a temporary test
 window for a few seconds and prints its painted frame rate.
 `PHYSICAL_TEST_WAYLAND=1 ./check` also verifies all 660 brick centers in a
-real GPU screenshot, covering dense fields that exceed 16-bit vertex ranges.
+real GPU screenshot, covering dense fields that exceed 16-bit vertex ranges,
+and tests real Wayland capture through right click, release/reacquisition,
+Escape closing, menus, fullscreen and reopening.
 
 `PHYSICAL_TEST_WAYLAND=1 python3 tests/performance.py` runs a three-minute
 level 26 benchmark with additional balls, magnets, and zapper effects. It reports

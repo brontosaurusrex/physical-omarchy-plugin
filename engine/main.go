@@ -10748,6 +10748,7 @@ func setupInput() {
 				code == "AltLeft" || code == "AltRight") &&
 				!e.Get("repeat").Bool() {
 				waitingForStart = false
+				paused = false
 				leftPressed = false
 				rightPressed = false
 				paddle.vx = 0

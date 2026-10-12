@@ -9,6 +9,7 @@ QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME= "$project_dir/bin/renderer-test"
 if [[ ${PHYSICAL_TEST_WAYLAND:-0} == 1 ]]; then
   g++ -O2 -std=c++17 -fPIC "$project_dir/tests/gpu_bricks_test.cpp" "$project_dir/bin/pointerlock.o" "$project_dir/bin/protocols/"*.o -I"$project_dir/bin" $(pkg-config --cflags --libs Qt6Quick Qt6Qml Qt6Gui Qt6Multimedia wayland-client) -o "$project_dir/bin/gpu-bricks-test"
   QT_QPA_PLATFORM=wayland "$project_dir/bin/gpu-bricks-test"
+  python3 "$project_dir/tests/pointer_lock.py"
 fi
 cd "$project_dir/engine"
 go test -buildvcs=false ./...

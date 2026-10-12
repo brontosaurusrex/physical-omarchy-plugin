@@ -30,7 +30,11 @@ with tempfile.TemporaryDirectory(prefix="physical-native-test-") as directory:
     colored = send("theme", theme=dict(background="#eeeeee", accent="#2266aa"))
     assert colored["ops"][0][2] == original_background, "Shell theme replaced game palette"
     backgrounds = {original_background}
-    assert not key(" ")["state"]["ready"]
+    hidden_ready = send("visibility", down=False)
+    assert hidden_ready["state"]["ready"] and hidden_ready["state"]["paused"]
+    send("visibility", down=True)
+    resumed = key(" ")["state"]
+    assert not resumed["ready"] and not resumed["paused"], "Reopened READY game needs more than one start key"
     initial = send("tick", dt=1/60)
     key("o")
     start = time.monotonic()

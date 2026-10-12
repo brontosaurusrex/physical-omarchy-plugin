@@ -9,7 +9,7 @@ Physical is a native Linux game packaged as an Omarchy shell plugin.
 | **C++ / Qt** (`native/renderer.cpp`) | Reads the engine's drawing packets, prepares geometry, caches brick shapes and draws the game through Qt's scene graph and QPainter. |
 | **GPU / OpenGL** | Draws batches of triangles for bricks, debris and zapper glow, blends their edges, and displays textures and the interface. |
 | **Qt Multimedia** (`native/audiomixer.h`, `AudioPool.qml`) | Mixes preloaded WAV samples into one audio output stream. Ordinary bricks pick random samples; power-ups have individual cues. |
-| **Wayland** (`native/pointerlock.cpp`) | Talks to the compositor to capture the mouse and receive relative movement. |
+| **Wayland** (`native/pointerlock.cpp`) | Talks to the compositor to capture the mouse and receive relative movement. Right click toggles capture; Esc closes the window and releases it. |
 | **Omarchy / Quickshell** | Loads the plugin, supplies the bar and themed controls, and hosts the Qt interface. |
 
 ## CPU versus GPU
