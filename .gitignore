@@ -14,3 +14,8 @@ __pycache__/
 /bin/audiomixer.moc
 
 /bin/gpu-bricks-test
+
+/bin/audio-mixer-test
+/bin/engine-profile-test
+/bin/engine-cpu.pprof
+/bin/audit-logs/

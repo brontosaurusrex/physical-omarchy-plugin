@@ -1,5 +1,9 @@
 # Full brick rendering, audio and performance — 2026-10-12
 
+Historical measurements of the implementation at that time. Later audio,
+control and watchdog changes are documented in [the current audit](audit-2026-10-12.md);
+the values and raw logs below remain unchanged.
+
 Rounded bricks now use cached GPU triangle meshes instead of repeatedly
 rasterizing the entire brick texture. Large meshes are split into chunks of
 at most 61,440 vertices (complete triangles). The failure matched
@@ -14,9 +18,10 @@ immediate repeats. Activated power-ups use their corresponding original cue
 for all 12 feature types. Feature events retain their identity and take
 priority over generic brick collisions when the queue is full. The single
 native audio stream remains; its mixing loop now reads immutable clip data
-directly and supports the engine's pitch scale. Sample sources are listed in
-`sounds/samples.json`. Browser stereo positioning, filtering and reverb remain
-outside this port's audio implementation.
+directly and supports the engine's pitch scale. At that revision, `sounds/samples.json` mapped the source-master WAVs; the
+current manifest records runtime Opus conversions instead. At the time of
+these measurements, stereo positioning, filtering and room acoustics were
+outside the port's audio implementation.
 
 Hardware: Intel HD Graphics 520, 1920×1080 display at scale 1.6, Qt 6.11.2,
 Quickshell 0.3.1, OpenGL. The game uses its default 1080×542 logical-pixel

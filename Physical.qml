@@ -57,6 +57,8 @@ Item {
         if (event.key === Qt.Key_Question) { if (!menuVisible) toggleMenu(); helpVisible = !helpVisible; return; }
         if (event.key === Qt.Key_Escape) { dismiss(); return; }
         if (event.key === Qt.Key_Q && !state.editor) { dismiss(); return; }
+        if (event.key === Qt.Key_S && !event.isAutoRepeat && !menuVisible && !state.editor) { send({action:"toggle-sound"}); return; }
+        if (event.key === Qt.Key_K && (event.modifiers & Qt.ShiftModifier) && state.replay) { send({action:"replay-exit"}); return; }
         if (menuVisible) return;
         send({ action: "key", key: keyName(event), code: keyName(event), down: true, repeat: event.isAutoRepeat, shift: (event.modifiers & Qt.ShiftModifier) !== 0 });
     }
@@ -68,6 +70,7 @@ Item {
         }
         send({ action: "key", key: keyName(event), code: keyName(event), down: false });
     }
+    property int frameReplies: 0
     property var state: ({})
     property var sliders: []
     property string errorText: ""
@@ -120,6 +123,9 @@ Item {
         send({ action: "key", key: key, code: code || key, down: false });
         gameInput.forceActiveFocus();
     }
+    function togglePlayback() {
+        shortcut(state.replay ? (state.replayDirection === 0 ? "l" : "k") : " ", "Space");
+    }
     function keyName(event) {
         var special = ({});
         special[Qt.Key_Left] = "ArrowLeft"; special[Qt.Key_Right] = "ArrowRight";
@@ -127,17 +133,23 @@ Item {
         special[Qt.Key_Space] = " "; special[Qt.Key_Return] = "Enter"; special[Qt.Key_Enter] = "Enter";
         special[Qt.Key_Escape] = "Escape"; special[Qt.Key_PageUp] = "PageUp"; special[Qt.Key_PageDown] = "PageDown";
         special[Qt.Key_Home] = "Home"; special[Qt.Key_End] = "End";
-        return special[event.key] || event.text || "";
+        if (special[event.key]) return special[event.key];
+        if (event.text) return event.text;
+        // Qt test/remote key events can carry a key code with empty text.
+        if ((event.key >= Qt.Key_A && event.key <= Qt.Key_Z) || (event.key >= Qt.Key_0 && event.key <= Qt.Key_9)) return String.fromCharCode(event.key).toLowerCase();
+        return "";
     }
     function receive(line) {
         try {
             var packet = canvas.acceptLine(line);
             if (packet.type !== "frame") return;
+            frameReplies++;
             var first = !engineReady;
             engineReady = true;
             if (packet.action === "tick") ticksPending = Math.max(0, ticksPending - 1);
             state = packet.state;
             if (packet.sliders) sliders = packet.sliders;
+            if (packet.room) audio.setRoom(packet.room);
             if (packet.sounds && opened) audio.play(packet.sounds);
             if (packet.clipboard) { Quickshell.clipboardText = packet.clipboard; notice = "Settings copied"; noticeTimer.restart(); }
             if (packet.export) { notice = "Saved " + packet.export; noticeTimer.restart(); }
@@ -266,7 +278,7 @@ Item {
                         anchors.right: parent.right
                         anchors.margins: 14
                         spacing: 8
-                        HudButton { icon: root.state.paused || root.state.ready ? "play" : "pause"; foreground: root.hudColor; onClicked: { pointerLock.release(); root.shortcut(" ", "Space"); } }
+                        HudButton { objectName: "playback-toggle"; icon: root.state.replay ? (root.state.replayDirection === 0 ? "play" : "pause") : (root.state.paused || root.state.ready ? "play" : "pause"); foreground: root.hudColor; onClicked: { pointerLock.release(); root.togglePlayback(); } }
                         HudButton { icon: "fullscreen"; foreground: root.hudColor; onClicked: root.toggleFullscreen(); }
                         HudButton { icon: "menu"; foreground: root.hudColor; onClicked: root.toggleMenu(); }
                     }

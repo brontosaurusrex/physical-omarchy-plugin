@@ -22,6 +22,8 @@ with tempfile.TemporaryDirectory(prefix="physical-native-test-") as directory:
     assert first["state"]["levels"] == 33
     assert first["state"]["ready"] and first["caches"]
     assert first["state"]["volume"] == 0.25
+    assert any(op[:2] == ["fillText", "P H Y S I C A L"] for op in first["ops"]), "First-level title was lost"
+    assert first["room"]["name"] == "space" and first["room"]["dry"] == .5
     assert send("volume", value=0.37)["state"]["volume"] == 0.37
     assert send("volume", value=2)["state"]["volume"] == 1
     assert send("volume", value=-1)["state"]["volume"] == 0
@@ -43,6 +45,7 @@ with tempfile.TemporaryDirectory(prefix="physical-native-test-") as directory:
     assert frame["state"]["replayFrames"] > 10
     assert frame["state"]["physicsSteps"] == 4
     assert not frame["caches"], "Unchanged bricks must not be resent every frame"
+    assert "room" not in frame, "Unchanged room settings must not restart ramps every frame"
     replay = key("k")
     assert replay["state"]["replay"]
     assert key("Home")["state"]["replayFrame"] == 0
@@ -65,6 +68,9 @@ with tempfile.TemporaryDirectory(prefix="physical-native-test-") as directory:
         selected = key("PageDown")
         assert selected["state"]["level"] == expected
         assert selected["width"] > 0 and selected["height"] > 0
+        if expected in (23,26,27):
+            assert selected["room"]["name"] == {23:"cave",26:"matrix",27:"space"}[expected]
+            assert selected["room"]["dry"] == {23:.1,26:.6,27:.5}[expected]
         backgrounds.add(selected["ops"][0][2])
         key(" ")
         for _ in range(5): send("tick", dt=1/60)

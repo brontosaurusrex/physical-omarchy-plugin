@@ -1,35 +1,200 @@
-{
-  "brick0.wav": "brickHits/bottle_var_01_short_pop.wav",
-  "brick1.wav": "brickHits/bottle_var_02_hollow.wav",
-  "brick2.wav": "brickHits/bottle_var_03_bright_shards.wav",
-  "brick3.wav": "brickHits/bottle_var_04_green_glass.wav",
-  "brick4.wav": "brickHits/bottle_var_05_thick_pop.wav",
-  "brick5.wav": "brickHits/bottle_var_06_scatter.wav",
-  "brick6.wav": "brickHits/glass_break_01_small_snap.wav",
-  "brick7.wav": "brickHits/glass_break_02_bottle.wav",
-  "brick8.wav": "brickHits/glass_break_04_thin_shatter.wav",
-  "brick9.wav": "brickHits/small_snap_var_01_tight.wav",
-  "brick10.wav": "brickHits/small_snap_var_02_crispy.wav",
-  "brick11.wav": "brickHits/small_snap_var_03_double_tick.wav",
-  "brick12.wav": "brickHits/small_snap_var_04_sharp_chip.wav",
-  "brick13.wav": "brickHits/small_snap_var_05_glassy_click.wav",
-  "brick14.wav": "brickHits/small_snap_var_06_split_tick.wav",
-  "brick15.wav": "brickHits/thin_shatter_var_01_needle.wav",
-  "brick16.wav": "brickHits/thin_shatter_var_02_spray.wav",
-  "brick17.wav": "brickHits/thin_shatter_var_03_delicate.wav",
-  "brick18.wav": "brickHits/thin_shatter_var_04_razor.wav",
-  "brick19.wav": "brickHits/thin_shatter_var_05_silver_spray.wav",
-  "brick20.wav": "brickHits/thin_shatter_var_06_soft_delicate.wav",
-  "feature-bigpaddle.wav": "magicBrickHits/bigpaddle.wav",
-  "feature-blackhole.wav": "magicBrickHits/blackhole.wav",
-  "feature-breakunbreakable.wav": "magicBrickHits/breakunbreakable.wav",
-  "feature-dualballs.wav": "magicBrickHits/dualballs.wav",
-  "feature-influencer.wav": "magicBrickHits/influencer.wav",
-  "feature-lowgravity.wav": "magicBrickHits/lowgravity.wav",
-  "feature-magnet.wav": "magicBrickHits/magnet.wav",
-  "feature-nuke.wav": "magicBrickHits/nuke.wav",
-  "feature-passthrough.wav": "magicBrickHits/passthrough.wav",
-  "feature-reversegravity.wav": "magicBrickHits/reversegravity.wav",
-  "feature-speedboost.wav": "magicBrickHits/speedboost.wav",
-  "feature-zapper.wav": "magicBrickHits/zapper.wav"
-}
+[
+  {
+    "source": "sounds/brickHits/runtime/bottle_var_01_short_pop.opus",
+    "source_sha256": "80cd3761cfe52ba099e5bb82d7af88618d1b7d85c589077fedd149a6e4408662",
+    "output": "brick0.wav",
+    "output_sha256": "f8ccb7580499dea3666025490054dd981fcd2e6e242406372228c30e39efb187"
+  },
+  {
+    "source": "sounds/brickHits/runtime/bottle_var_02_hollow.opus",
+    "source_sha256": "97e24d4eecf342a4aaf0005f57f21c8627b1275d1f7b54ee21670c6b83c284af",
+    "output": "brick1.wav",
+    "output_sha256": "9d77e303bea18ebadb064ff6b654f12bab4546336015321ea4cb57105a73ad48"
+  },
+  {
+    "source": "sounds/brickHits/runtime/bottle_var_03_bright_shards.opus",
+    "source_sha256": "b3b861631d89b1774b7e5886bc7d4b15ee0e4d1e126ed72345baafb4f5358ecb",
+    "output": "brick2.wav",
+    "output_sha256": "d474b5d77116e6906f357707eeb77ea55bcd5c883485e67f54c39c18e54a2862"
+  },
+  {
+    "source": "sounds/brickHits/runtime/bottle_var_04_green_glass.opus",
+    "source_sha256": "a3591057dd16138a1b910d549d945ea84e00458e18ea461d7db5380269418ffa",
+    "output": "brick3.wav",
+    "output_sha256": "41c438e7e75129d7bf6d6adfa42b01a93d3f1de97f3148609f8e689d7e4a5752"
+  },
+  {
+    "source": "sounds/brickHits/runtime/bottle_var_05_thick_pop.opus",
+    "source_sha256": "9c12cd576548ce02d758a65126170a83808ef65859877a19c929a661a8bb69e5",
+    "output": "brick4.wav",
+    "output_sha256": "6890e2d49c2cc78d2b90a2be014a4744b1b5984cdcf8875b1e93b1f49d3a4cf2"
+  },
+  {
+    "source": "sounds/brickHits/runtime/bottle_var_06_scatter.opus",
+    "source_sha256": "175e41bd93880e2bd52769242cdeadb9fc1d1dbf2eb61586f5587bcd0b569da6",
+    "output": "brick5.wav",
+    "output_sha256": "acac1cecf312d3fd399319c8d40e0d7a83c0667ad38c66308d53a24dddeb4c4b"
+  },
+  {
+    "source": "sounds/brickHits/runtime/glass_break_01_small_snap.opus",
+    "source_sha256": "24527706a95a76e263d87f008d4978d55124b36a710f1d7fee4ede5c74415eed",
+    "output": "brick6.wav",
+    "output_sha256": "c1ca77431f88c9bf6c2234451e2cb83078dd3e1e467fbd5683c31d2dfb5c86c4"
+  },
+  {
+    "source": "sounds/brickHits/runtime/glass_break_02_bottle.opus",
+    "source_sha256": "0198731aec9d055eba956706b7a2c5ae1d8034415ac6d8a1798c97edb79f5ff6",
+    "output": "brick7.wav",
+    "output_sha256": "18c0e3fb60e798067fbf1bce4b90f058cae453fc89bd39c549c3cb5b10e767a7"
+  },
+  {
+    "source": "sounds/brickHits/runtime/glass_break_04_thin_shatter.opus",
+    "source_sha256": "185cadfcf25b46581fcef01e6064d1bd3b16c25aab48df5da89cf3d7bff37b36",
+    "output": "brick8.wav",
+    "output_sha256": "06c89be41035532c00db4b5d259300213cfaeb5b688f65aef788229d1b28a3e2"
+  },
+  {
+    "source": "sounds/brickHits/runtime/small_snap_var_01_tight.opus",
+    "source_sha256": "ad570d68c5076e547992596cd6b2dee6377b71f5f1949aec4f359ff2ae049495",
+    "output": "brick9.wav",
+    "output_sha256": "bd66e2487d939fa1c051c7254b24d2887927d7415ad2a6fc23e4a9a40e85418c"
+  },
+  {
+    "source": "sounds/brickHits/runtime/small_snap_var_02_crispy.opus",
+    "source_sha256": "fc94be36882dddb5950693a710e115c427822ade8f7d706c4d7e4f5b998ff1d3",
+    "output": "brick10.wav",
+    "output_sha256": "c2a42f7f97b22aae074189251058806865989f0f8d0ab7bdd31b8ed6357ba9f9"
+  },
+  {
+    "source": "sounds/brickHits/runtime/small_snap_var_03_double_tick.opus",
+    "source_sha256": "7b26163aabcc23cd3faddf95442fddef8076eb6db9819449d7d46474f4b1ad72",
+    "output": "brick11.wav",
+    "output_sha256": "4a7b80563d848b62277336aff8a0144caefde674b035284c4e7a180623da965e"
+  },
+  {
+    "source": "sounds/brickHits/runtime/small_snap_var_04_sharp_chip.opus",
+    "source_sha256": "58e34a53de8b6cee59ae5bea2190ccf57034a534befaf2532bb5334863106ff1",
+    "output": "brick12.wav",
+    "output_sha256": "4060ff3c61767f5e5ec73560684bc310af33f00cff998422346d35a05d12176e"
+  },
+  {
+    "source": "sounds/brickHits/runtime/small_snap_var_05_glassy_click.opus",
+    "source_sha256": "e18ad218e75184f719a44f84067d9908897c3887c13e91fbda6a078c98068404",
+    "output": "brick13.wav",
+    "output_sha256": "c91567389046e1fbc4b352f058e573d01159e4aadaafc2dbbc2f260bd5bb03fc"
+  },
+  {
+    "source": "sounds/brickHits/runtime/small_snap_var_06_split_tick.opus",
+    "source_sha256": "adc05dffdd8c63f5555f864afc0e3bc223e4608b943591bbc17b04fde9ca7117",
+    "output": "brick14.wav",
+    "output_sha256": "034a5d6f4c327e0f4a42e41f1ad7f8d9b0767878f5eb23e52b19e920ec50a4be"
+  },
+  {
+    "source": "sounds/brickHits/runtime/thin_shatter_var_01_needle.opus",
+    "source_sha256": "36851827442508140ac93f1ae8faf7269aa02c8602fe16c73b188ad9fb599898",
+    "output": "brick15.wav",
+    "output_sha256": "525a052085862ed12ea6f173f6096ad1d7f7e344533275252b5bd515d2198119"
+  },
+  {
+    "source": "sounds/brickHits/runtime/thin_shatter_var_02_spray.opus",
+    "source_sha256": "48129c0d55097b591261c2788c6bbc18ea67a77f33a98ae24b84cb36178757e3",
+    "output": "brick16.wav",
+    "output_sha256": "aa3e496db0ac7ffe762f391499c5b08c7430d5f952299591969ee494cdbbb880"
+  },
+  {
+    "source": "sounds/brickHits/runtime/thin_shatter_var_03_delicate.opus",
+    "source_sha256": "a3183343a81e895378d0dc84ad021d216a85446deab1ff5ddb3622e210b513ed",
+    "output": "brick17.wav",
+    "output_sha256": "e20558f64b5f918837779f64e7ab8e8d981f112eadf5e9c16f33d4b770eb1951"
+  },
+  {
+    "source": "sounds/brickHits/runtime/thin_shatter_var_04_razor.opus",
+    "source_sha256": "37047b5c358118fbc0844f3adeda104051a65f23f308d9ff2e7da198a8aba705",
+    "output": "brick18.wav",
+    "output_sha256": "47386ccd3346a6e2694dbb8bc222e92b6c9ad11b3f79bd364e6d7ce09f094a71"
+  },
+  {
+    "source": "sounds/brickHits/runtime/thin_shatter_var_05_silver_spray.opus",
+    "source_sha256": "5c13d84f3b269fefccb5beb04e12b522389ab0efdffb39e34cb08efd548383e9",
+    "output": "brick19.wav",
+    "output_sha256": "d64d909f1b50eae2a4661e6d66219dc791b98be418bbb609f9eb4e44cf12ab11"
+  },
+  {
+    "source": "sounds/brickHits/runtime/thin_shatter_var_06_soft_delicate.opus",
+    "source_sha256": "dfc4d222440e717c6269c1d5720ca3c0087adb5dd76da489cd1f6e4a66eb1a55",
+    "output": "brick20.wav",
+    "output_sha256": "b6b715103014601fe0e6a8742e715ab7d8903eed180007f50fb41f98e3a88076"
+  },
+  {
+    "source": "sounds/magicBrickHits/runtime/bigpaddle.opus",
+    "source_sha256": "f177dde54edb5eafd8d5dc13a0d5d208a743cbad65abbb2861f38e5b821370b0",
+    "output": "feature-bigpaddle.wav",
+    "output_sha256": "e75cd9cbcbf16526ca783a941419da07b55ee1a4a27ce9e1b17cb2af6db826a8"
+  },
+  {
+    "source": "sounds/magicBrickHits/runtime/blackhole.opus",
+    "source_sha256": "dc152189dce306fb154cbdd58e18ad49067794fe456c91c494a1f166d2fe1c19",
+    "output": "feature-blackhole.wav",
+    "output_sha256": "8f9b78dabb84d4528013e03e43951a48051afc4694f079f04afef43575e53941"
+  },
+  {
+    "source": "sounds/magicBrickHits/runtime/breakunbreakable.opus",
+    "source_sha256": "215a570d51f6d7e231e38b068108ce0719fd574a07a73acdd91d2055a38e3bd9",
+    "output": "feature-breakunbreakable.wav",
+    "output_sha256": "e969b28a4c744a27a2f637772726ebb2f5bb10f0d9765c8438300ce224ca78ac"
+  },
+  {
+    "source": "sounds/magicBrickHits/runtime/dualballs.opus",
+    "source_sha256": "ff6912a74d43e4baa78041a24b09b038062c93eedd198fa8eb2b7316e239076d",
+    "output": "feature-dualballs.wav",
+    "output_sha256": "9016b4b0f9b9770fc9afbf7e6942cbc9dc6d209d371744a0e548933138cfe443"
+  },
+  {
+    "source": "sounds/magicBrickHits/runtime/influencer.opus",
+    "source_sha256": "43a0de4258b317c411158c212c806f3269a85bf3ee8c05bdcb28b22fb1e12fb5",
+    "output": "feature-influencer.wav",
+    "output_sha256": "29a1567cc26d3c030f89efe6599b956654ee141b9adf24f587705bc48baedf6c"
+  },
+  {
+    "source": "sounds/magicBrickHits/runtime/lowgravity.opus",
+    "source_sha256": "b5723354b4fc64895f4ec1391ce432d770021181584534b5dd134af6575f999c",
+    "output": "feature-lowgravity.wav",
+    "output_sha256": "d4df42a8ac520dc91701bc1bfa2f331c18276ac77896ad13d3f7a210ed5797b2"
+  },
+  {
+    "source": "sounds/magicBrickHits/runtime/magnet.opus",
+    "source_sha256": "2183a43e0473acb5bd91f2c52742ca6aef7bfa8cf8c309ff705de21dd45bf638",
+    "output": "feature-magnet.wav",
+    "output_sha256": "be77a947ec7ddfe8b1a7e8680cbba9253d07c7e367e63be74523a90175da8882"
+  },
+  {
+    "source": "sounds/magicBrickHits/runtime/nuke.opus",
+    "source_sha256": "402218afecfba3a3dce65129146857bbc63d3e5d7db56225ebff5b3384fff934",
+    "output": "feature-nuke.wav",
+    "output_sha256": "e2e3da401c8622de232eccd65818eebdce89863394c4c6a3072bca22b04d7217"
+  },
+  {
+    "source": "sounds/magicBrickHits/runtime/passthrough.opus",
+    "source_sha256": "00443ecacda2159313c91472316afb70c09f37312521b7bc4b919aa5614d4d1e",
+    "output": "feature-passthrough.wav",
+    "output_sha256": "45a9dadc5729bae58374fcb115982897a9f5f3201a2e70b45a9f238f56249529"
+  },
+  {
+    "source": "sounds/magicBrickHits/runtime/reversegravity.opus",
+    "source_sha256": "61b464374ca12bfe6377f95e5fd6d650a9b4acf2b25d9b591c49707522a58fa8",
+    "output": "feature-reversegravity.wav",
+    "output_sha256": "71457d61c2cdac0f30c94457b493d969588ff116bc2a01b62a2c09fb328131b9"
+  },
+  {
+    "source": "sounds/magicBrickHits/runtime/speedboost.opus",
+    "source_sha256": "965b701a73c3c0b37f72f5c60edc4d14943f9933398add9dd4a4f21ca88db7e0",
+    "output": "feature-speedboost.wav",
+    "output_sha256": "03ad3c991d4cd108716594733c2cd66569b88e9dae796f3d5880f58a3624bf99"
+  },
+  {
+    "source": "sounds/magicBrickHits/runtime/zapper.opus",
+    "source_sha256": "2de7a3c1c945684aa122c8279574cd926432b52867462568831228903dd641a6",
+    "output": "feature-zapper.wav",
+    "output_sha256": "5da86594be6d9faf22f5115ce7acd211322eedbc3ee781238a1bc95e70b72482"
+  }
+]

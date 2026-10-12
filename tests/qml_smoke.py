@@ -65,6 +65,7 @@ ShellRoot {
                 if (Quickshell.env("PHYSICAL_TEST_WAYLAND")) {
                     var audio = findItem(game, "physicalAudio"), wall = findItem(game, "sound-wall-0"), paddle = findItem(game, "sound-paddle-0");
                     if (!audio || !wall || !paddle || !wall.ready || !paddle.ready) { console.error("SMOKE contact clips not loaded"); Qt.exit(1); return; }
+                    if (audio.roomSettings.name !== "space" || audio.roomSettings.dry !== .5) { console.error("SMOKE level room settings did not reach audio mixer"); Qt.exit(1); return; }
                     var previous = "", selected = ({});
                     for (var sample = 0; sample < 300; ++sample) {
                         var name = audio.chooseClip({kind:"brick"});
@@ -76,7 +77,7 @@ ShellRoot {
                         var featureName = audio.featureClips[cue];
                         if (audio.chooseClip({kind:"magic", feature:featureName.slice(8)}) !== featureName || !findItem(game, "sound-" + featureName + "-0").ready) { console.error("SMOKE powerup cue missing", featureName); Qt.exit(1); return; }
                     }
-                    audio.play([{kind:"wall"}, {kind:"paddle"}, {kind:"magic", feature:"blackhole", args:[500,1]}]);
+                    audio.play([{kind:"wall",wave:"triangle",args:[230,175,.05,.12,0]}, {kind:"paddle",wave:"triangle",args:[180,320,.08,.18,0]}, {kind:"magic",feature:"blackhole",rate:1,gain:.05,cutoff:500,q:.5}]);
                     if (!audio.isPlaying("feature-blackhole")) { console.error("SMOKE powerup sample not playing"); Qt.exit(1); return; }
                     if (!(wall.playing || findItem(game, "sound-wall-1").playing) || !(paddle.playing || findItem(game, "sound-paddle-1").playing)) { console.error("SMOKE contact clips not playing"); Qt.exit(1); }
                 }
@@ -88,7 +89,7 @@ ShellRoot {
             } else if (root.phase === 11 && game.state.volume === 0.37) {
                 game.closeMenu(); game.shortcut("k"); root.phase = 2;
             } else if (root.phase === 2 && game.state.replay) {
-                game.shortcut("Escape"); game.shortcut("e"); root.phase = 3;
+                game.send({action:"replay-exit"}); game.shortcut("e"); root.phase = 3;
             } else if (root.phase === 3 && game.state.editor) {
                 var gravity = findItem(game.contentView, "physics-gravity");
                 if (!gravity || gravity.height < 12 || gravity.width < 100) { console.error("SMOKE unusable physics slider"); Qt.exit(1); }

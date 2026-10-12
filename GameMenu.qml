@@ -32,13 +32,13 @@ Rectangle {
             }
             Text { text: "Level " + root.controller.state.level + " / " + root.controller.state.levels; color: Color.muted; font.family: Style.fontFamily; font.pixelSize: Style.font.body; }
             RowLayout {
-                GameButton { text: root.controller.state.ready ? "Start" : "Resume"; onClicked: root.key(" ", "Space"); }
+                GameButton { objectName: "menu-playback"; text: root.controller.state.replay ? "Play replay" : (root.controller.state.ready ? "Start" : "Resume"); onClicked: { root.controller.closeMenu(); root.controller.togglePlayback(); } }
                 GameButton { text: "Retry"; onClicked: { root.controller.closeMenu(); root.controller.send({action: "restart"}); } }
                 GameButton { text: "Fullscreen"; onClicked: { root.controller.closeMenu(); root.controller.toggleFullscreen(); } }
             }
             RowLayout {
                 Layout.fillWidth: true
-                GameButton { text: root.controller.state.sound ? "Sound on" : "Muted"; selected: root.controller.state.sound === true; onClicked: root.controller.shortcut("s", "KeyS"); }
+                GameButton { text: root.controller.state.sound ? "Sound on" : "Muted"; selected: root.controller.state.sound === true; onClicked: root.controller.send({action:"toggle-sound"}); }
                 Text { text: Math.round(volume.value * 100) + "%"; color: Color.foreground; font.family: Style.fontFamily; font.pixelSize: Style.font.body; }
                 QQC.Slider {
                     id: volume
@@ -64,19 +64,19 @@ Rectangle {
                 }
             }
             RowLayout {
-                GameButton { text: "Debris"; selected: root.controller.state.debris === true; onClicked: root.controller.shortcut("r", "KeyR"); }
-                GameButton { text: "Auto"; selected: root.controller.state.auto === true; onClicked: root.controller.shortcut("o", "KeyO"); }
-                GameButton { text: "Lab"; selected: root.controller.state.editor === true; onClicked: root.key("e", "KeyE"); }
+                GameButton { objectName: "toggle-debris"; enabled: !root.controller.state.replay; text: "Debris"; selected: root.controller.state.debrisMaster === true; onClicked: root.controller.shortcut("r", "KeyR"); }
+                GameButton { objectName: "toggle-auto"; enabled: !root.controller.state.replay; text: "Auto"; selected: root.controller.state.auto === true; onClicked: root.controller.shortcut("o", "KeyO"); }
+                GameButton { objectName: "toggle-lab"; enabled: !root.controller.state.replay; text: "Lab"; selected: root.controller.state.editor === true; onClicked: root.key("e", "KeyE"); }
             }
             RowLayout {
-                GameButton { text: "Replay"; onClicked: root.key("k", "KeyK"); }
-                GameButton { text: "FPS"; onClicked: root.controller.shortcut("f", "KeyF"); }
+                GameButton { objectName: "replay-toggle"; text: root.controller.state.replay ? "Exit replay" : "Replay"; onClicked: { if (root.controller.state.replay) { root.controller.closeMenu(); root.controller.send({action:"replay-exit"}); } else root.key("k", "KeyK"); } }
+                GameButton { objectName: "toggle-fps"; enabled: !root.controller.state.replay; text: "FPS"; onClicked: root.controller.shortcut("f", "KeyF"); }
                 GameButton { text: "Controls"; selected: root.controller.helpVisible; onClicked: root.controller.helpVisible = !root.controller.helpVisible; }
             }
             Text {
                 Layout.fillWidth: true
                 visible: root.controller.helpVisible
-                text: "Mouse / ← → / A D   Move paddle\nRight click   Capture / release mouse\nSpace / Enter / click   Start or continue\nSpace / Esc   Pause\nSpace + F   Fullscreen\nPage Up / Down   Unlocked levels\nO   Automatic paddle (assisted)\nR   Debris    S   Sound\nM / Z   Magnets / zapper    2   Extra ball\nP   Diagnostics    F   Engine FPS\nE   Physics lab\n\nJ / K / L   Reverse / pause / forward replay\n← → / Home / End   Scrub replay\nEsc   Release mouse / exit fullscreen / replay\nV / B   Export SVG / SVG with trails\n\n?   Controls    Q   Close plugin\nSwitching windows pauses the game."
+                text: "Mouse / ← → / A D   Move paddle\nRight click   Capture / release mouse\nSpace / Enter / click   Start or continue\nSpace   Pause / resume\nSpace + F   Fullscreen\nPage Up / Down   Unlocked levels\nO   Automatic paddle (assisted)\nR   Debris    S   Sound\nM / Z   Magnets / zapper    2   Extra ball    T   Rescue\nP / I   Diagnostics    F   Engine FPS\nShift + F   Reset lowest FPS    U   Temporary level unlock\nE   Physics lab\n\nJ / K / L   Reverse / pause / forward replay\n← → / Home / End   Scrub replay\nShift + K / Exit replay button   Return to game\nEsc   Close window and release mouse\nV / B   Export SVG / SVG with trails\n\n?   Controls    Q   Close (outside lab)\nSwitching windows pauses the game."
                 color: Color.foreground
                 font.family: Style.fontFamily
                 font.pixelSize: Style.font.bodySmall

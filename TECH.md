@@ -8,7 +8,7 @@ Physical is a native Linux game packaged as an Omarchy shell plugin.
 | **Qt Quick / QML** (`Physical.qml`, menus and widgets) | Defines the window, controls, input handlers and bar button. QML describes the interface; small JavaScript functions connect its actions. |
 | **C++ / Qt** (`native/renderer.cpp`) | Reads the engine's drawing packets, prepares geometry, caches brick shapes and draws the game through Qt's scene graph and QPainter. |
 | **GPU / OpenGL** | Draws batches of triangles for bricks, debris and zapper glow, blends their edges, and displays textures and the interface. |
-| **Qt Multimedia** (`native/audiomixer.h`, `AudioPool.qml`) | Mixes preloaded WAV samples into one audio output stream. Ordinary bricks pick random samples; power-ups have individual cues. |
+| **Qt Multimedia** (`native/audiomixer.h`, `native/audioroom.h`, `AudioPool.qml`) | Mixes stereo PCM samples and generated oscillator tones into one persistent output stream. Ordinary bricks pick random samples; power-ups have individual cues. Pitch, filters, gain, stereo pan and per-level room echoes run on the CPU. |
 | **Wayland** (`native/pointerlock.cpp`) | Talks to the compositor to capture the mouse and receive relative movement. Right click toggles capture; Esc closes the window and releases it. |
 | **Omarchy / Quickshell** | Loads the plugin, supplies the bar and themed controls, and hosts the Qt interface. |
 
@@ -29,6 +29,11 @@ Each frame follows this path:
 Input → Go simulation → JSON drawing packets over process pipes
       → C++ renderer → Qt scene graph / OpenGL → display
 ```
+
+Magnetic debris queries a direct array of brick-grid cells instead of hashing
+each cell repeatedly. The cell contents and traversal order match the original
+grid, so this reduces CPU lookup work without changing which brick attracts a
+fragment. Regression checks compare 3,000 queries, including destroyed bricks.
 
 Qt's display clock requests frames, with at most two requests outstanding.
 Hidden windows stop requesting frames. A faster GPU can improve drawing, but
@@ -66,3 +71,32 @@ but not to execute an already-built game.
 The shell controls follow Omarchy's theme. The playfield keeps the game's
 original level palettes. Progress is stored separately from the web version.
 No browser, web server or WebAssembly runs the game.
+
+## Audio and test limits
+
+The sample bank is decoded from the original game's runtime Opus files, with
+stereo channels preserved. The Go engine emits the original tone waveform,
+frequency sweep, duration, gain, delay and position. C++ generates and mixes
+these tones with filtered sample voices. Repeated feature cues fade and restart.
+The original room presets feed a dry branch and a wet branch with input/output
+filters, three reflection delays and a filtered feedback loop on the third tap.
+Room parameters come from the Go level config; QML forwards changes to the mixer.
+Gains and delay times ramp over 160 ms; filter coefficients update every 32
+samples during that ramp and remain cached afterward. Low/high-pass Q uses the
+Web Audio dB convention, while band-pass Q is linear. Silent tails are cleared
+after 12 seconds, and closing/muting clears them immediately. Native oscillators,
+resampling and scheduling still differ from browser DSP, so this is not
+bit-identical output.
+
+`tests/keyboard.py` sends Qt keyboard events through the actual QML window.
+`tests/pointer_lock.py` verifies Wayland capture through the QML mouse handler.
+`tests/performance.py` runs real gameplay with private progress, tracks painted
+frames and engine replies, and uses an external heartbeat watchdog. Deliberate
+UI/engine freeze injection verifies the detector; longer runs can rotate dense
+levels 23, 26 and 27. Tests cannot guarantee that every driver or future run is
+crash-free. See [the current audit](docs/audit-2026-10-12.md) for measured results.
+
+`BenchmarkNativeDenseFrames` profiles simulation, drawing-packet preparation and
+JSON encoding without a window or audio device. Its timings are engine CPU
+costs, not display FPS. Use `GODEBUG=randseednop=0` for reproducible rounds, and
+`PHYSICAL_BENCH_HASH_GRID=1` to compare the original hash-grid lookup path.

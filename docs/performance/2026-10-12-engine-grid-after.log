@@ -1,0 +1,159 @@
+Unknown level variable: //unbreakableStrokeColor
+Level 23 started
+goos: linux
+goarch: amd64
+pkg: physical
+cpu: Intel(R) Core(TM) i7-6600U CPU @ 2.60GHz
+BenchmarkNativeDenseFrames/level23-4         	Unknown level variable: //unbreakableStrokeColor
+Level 23 started
+001 CORNER HIT row=4 col=36 amount=1.00 normal=(0.347, 0.938) impact=494.8
+002 CORNER HIT row=8 col=44 amount=1.00 normal=(-0.534, 0.845) impact=549.7
+003 CORNER HIT row=11 col=51 amount=1.00 normal=(0.594, 0.805) impact=135.4
+004 CORNER HIT row=5 col=30 amount=1.00 normal=(0.396, 0.918) impact=907.9
+005 CORNER HIT row=4 col=22 amount=1.00 normal=(-0.287, 0.958) impact=935.1
+Unknown level variable: //unbreakableStrokeColor
+Level 23 started
+006 CORNER HIT row=4 col=36 amount=1.00 normal=(0.347, 0.938) impact=494.8
+007 CORNER HIT row=8 col=44 amount=1.00 normal=(-0.534, 0.845) impact=549.7
+008 CORNER HIT row=11 col=51 amount=1.00 normal=(0.594, 0.805) impact=135.4
+009 CORNER HIT row=5 col=30 amount=1.00 normal=(0.396, 0.918) impact=907.9
+Unknown level variable: //unbreakableStrokeColor
+Level 23 started
+010 CORNER HIT row=4 col=36 amount=1.00 normal=(0.347, 0.938) impact=494.8
+011 CORNER HIT row=8 col=44 amount=1.00 normal=(-0.534, 0.845) impact=549.7
+012 CORNER HIT row=11 col=51 amount=1.00 normal=(0.594, 0.805) impact=135.4
+013 CORNER HIT row=5 col=30 amount=1.00 normal=(0.396, 0.918) impact=907.9
+014 CORNER HIT row=4 col=22 amount=1.00 normal=(-0.287, 0.958) impact=935.1
+Unknown level variable: //unbreakableStrokeColor
+Level 23 started
+015 CORNER HIT row=4 col=36 amount=1.00 normal=(0.347, 0.938) impact=494.8
+016 CORNER HIT row=8 col=44 amount=1.00 normal=(-0.534, 0.845) impact=549.7
+017 CORNER HIT row=11 col=51 amount=1.00 normal=(0.594, 0.805) impact=135.4
+018 CORNER HIT row=5 col=30 amount=1.00 normal=(0.396, 0.918) impact=907.9
+Unknown level variable: //unbreakableStrokeColor
+Level 23 started
+    1800	   1414652 ns/op	  169708 B/op	    4917 allocs/op
+Unknown level variable: //frictionCoeff
+Unknown level variable: //maxSpeed
+Unknown level variable: //maxSpin
+Level 26 started
+BenchmarkNativeDenseFrames/level26-4         	Unknown level variable: //frictionCoeff
+Unknown level variable: //maxSpeed
+Unknown level variable: //maxSpin
+Level 26 started
+019 CORNER HIT row=2 col=27 amount=1.00 normal=(-0.873, -0.488) impact=190.3
+020 CORNER HIT row=3 col=23 amount=1.00 normal=(0.915, -0.404) impact=278.7
+021 CORNER HIT row=2 col=19 amount=1.00 normal=(0.495, -0.869) impact=433.1
+022 CORNER HIT row=4 col=21 amount=1.00 normal=(-0.937, -0.348) impact=361.9
+023 CORNER HIT row=5 col=25 amount=1.00 normal=(0.572, -0.820) impact=506.2
+024 CORNER HIT row=3 col=31 amount=1.00 normal=(-0.003, -1.000) impact=809.7
+025 CORNER HIT row=12 col=25 amount=1.00 normal=(0.927, -0.374) impact=232.9
+026 CORNER HIT row=7 col=31 amount=1.00 normal=(0.029, -1.000) impact=563.5
+027 CORNER HIT row=8 col=23 amount=1.00 normal=(0.229, 0.973) impact=383.3
+028 CORNER HIT row=8 col=22 amount=1.00 normal=(0.553, 0.833) impact=159.8
+029 CORNER HIT row=7 col=22 amount=1.00 normal=(0.242, 0.970) impact=280.6
+030 CORNER HIT row=4 col=17 amount=1.00 normal=(0.830, -0.558) impact=628.3
+031 CORNER HIT row=14 col=24 amount=1.00 normal=(0.926, 0.377) impact=453.3
+032 CORNER HIT row=13 col=23 amount=1.00 normal=(0.457, -0.889) impact=747.8
+033 CORNER HIT row=10 col=12 amount=1.00 normal=(0.787, -0.617) impact=310.5
+034 CORNER HIT row=9 col=10 amount=1.00 normal=(0.715, 0.699) impact=467.6
+035 CORNER HIT row=14 col=16 amount=1.00 normal=(0.994, -0.111) impact=427.2
+036 CORNER HIT row=20 col=12 amount=1.00 normal=(0.938, -0.348) impact=210.7
+037 CORNER HIT row=18 col=32 amount=1.00 normal=(0.854, -0.521) impact=420.7
+038 CORNER HIT row=15 col=31 amount=1.00 normal=(0.996, 0.084) impact=403.2
+039 CORNER HIT row=22 col=33 amount=1.00 normal=(1.000, -0.006) impact=335.4
+040 CORNER HIT row=23 col=23 amount=1.00 normal=(-0.250, 0.968) impact=896.6
+041 CORNER HIT row=17 col=23 amount=1.00 normal=(0.574, -0.819) impact=430.2
+042 CORNER HIT row=14 col=38 amount=1.00 normal=(-0.037, -0.999) impact=726.5
+Unknown level variable: //frictionCoeff
+Unknown level variable: //maxSpeed
+Unknown level variable: //maxSpin
+Level 26 started
+043 CORNER HIT row=2 col=27 amount=1.00 normal=(-0.873, -0.488) impact=190.3
+044 CORNER HIT row=3 col=23 amount=1.00 normal=(0.915, -0.404) impact=278.7
+045 CORNER HIT row=2 col=19 amount=1.00 normal=(0.495, -0.869) impact=433.1
+046 CORNER HIT row=4 col=21 amount=1.00 normal=(-0.937, -0.348) impact=361.9
+047 CORNER HIT row=5 col=25 amount=1.00 normal=(0.572, -0.820) impact=506.2
+048 CORNER HIT row=3 col=31 amount=1.00 normal=(-0.003, -1.000) impact=809.7
+049 CORNER HIT row=12 col=25 amount=1.00 normal=(0.927, -0.374) impact=232.9
+050 CORNER HIT row=7 col=31 amount=1.00 normal=(0.029, -1.000) impact=563.5
+051 CORNER HIT row=8 col=23 amount=1.00 normal=(0.229, 0.973) impact=383.3
+052 CORNER HIT row=8 col=22 amount=1.00 normal=(0.553, 0.833) impact=159.8
+053 CORNER HIT row=7 col=22 amount=1.00 normal=(0.242, 0.970) impact=280.6
+054 CORNER HIT row=4 col=17 amount=1.00 normal=(0.830, -0.558) impact=628.3
+055 CORNER HIT row=14 col=24 amount=1.00 normal=(0.926, 0.377) impact=453.3
+056 CORNER HIT row=13 col=23 amount=1.00 normal=(0.457, -0.889) impact=747.8
+057 CORNER HIT row=10 col=12 amount=1.00 normal=(0.787, -0.617) impact=310.5
+058 CORNER HIT row=9 col=10 amount=1.00 normal=(0.715, 0.699) impact=467.6
+059 CORNER HIT row=14 col=16 amount=1.00 normal=(0.994, -0.111) impact=427.2
+060 CORNER HIT row=20 col=12 amount=1.00 normal=(0.938, -0.348) impact=210.7
+061 CORNER HIT row=18 col=32 amount=1.00 normal=(0.854, -0.521) impact=420.7
+062 CORNER HIT row=15 col=31 amount=1.00 normal=(0.996, 0.084) impact=403.2
+063 CORNER HIT row=22 col=33 amount=1.00 normal=(1.000, -0.006) impact=335.4
+064 CORNER HIT row=23 col=23 amount=1.00 normal=(-0.250, 0.968) impact=896.6
+065 CORNER HIT row=17 col=23 amount=1.00 normal=(0.574, -0.819) impact=430.2
+066 CORNER HIT row=14 col=38 amount=1.00 normal=(-0.037, -0.999) impact=726.5
+Unknown level variable: //frictionCoeff
+Unknown level variable: //maxSpeed
+Unknown level variable: //maxSpin
+Level 26 started
+    1800	   1807030 ns/op	  191418 B/op	    5018 allocs/op
+Unknown level variable: //frictionCoeff
+Unknown level variable: //maxSpin
+Invalid physics level variable: tiltUpSpeed=-100
+Level 27 started
+BenchmarkNativeDenseFrames/level27-4         	Unknown level variable: //frictionCoeff
+Unknown level variable: //maxSpin
+Invalid physics level variable: tiltUpSpeed=-100
+Level 27 started
+067 CORNER HIT row=2 col=14 amount=1.00 normal=(-0.773, -0.634) impact=488.9
+068 CORNER HIT row=2 col=10 amount=1.00 normal=(0.990, -0.140) impact=550.1
+069 CORNER HIT row=2 col=14 amount=1.00 normal=(-0.482, -0.876) impact=244.2
+070 CORNER HIT row=2 col=10 amount=1.00 normal=(0.825, -0.565) impact=383.4
+071 CORNER HIT row=6 col=8 amount=1.00 normal=(0.925, 0.381) impact=432.6
+072 CORNER HIT row=16 col=14 amount=1.00 normal=(0.417, -0.909) impact=466.2
+073 CORNER HIT row=14 col=14 amount=1.00 normal=(0.231, 0.973) impact=579.1
+074 CORNER HIT row=7 col=21 amount=1.00 normal=(0.780, 0.625) impact=165.3
+075 CORNER HIT row=7 col=21 amount=1.00 normal=(-0.776, 0.630) impact=206.0
+076 CORNER HIT row=7 col=21 amount=1.00 normal=(0.398, 0.917) impact=236.1
+077 CORNER HIT row=11 col=3 amount=1.00 normal=(-0.993, -0.122) impact=1017.4
+078 CORNER HIT row=7 col=21 amount=1.00 normal=(-0.996, 0.090) impact=447.1
+079 CORNER HIT row=2 col=14 amount=1.00 normal=(-0.910, -0.414) impact=376.0
+Unknown level variable: //frictionCoeff
+Unknown level variable: //maxSpin
+Invalid physics level variable: tiltUpSpeed=-100
+Level 27 started
+080 CORNER HIT row=2 col=14 amount=1.00 normal=(-0.773, -0.634) impact=488.9
+081 CORNER HIT row=2 col=10 amount=1.00 normal=(0.990, -0.140) impact=550.1
+082 CORNER HIT row=2 col=14 amount=1.00 normal=(-0.482, -0.876) impact=244.2
+Unknown level variable: //frictionCoeff
+Unknown level variable: //maxSpin
+Invalid physics level variable: tiltUpSpeed=-100
+Level 27 started
+083 CORNER HIT row=2 col=14 amount=1.00 normal=(-0.773, -0.634) impact=488.9
+084 CORNER HIT row=2 col=10 amount=1.00 normal=(0.990, -0.140) impact=550.1
+085 CORNER HIT row=2 col=14 amount=1.00 normal=(-0.482, -0.876) impact=244.2
+086 CORNER HIT row=2 col=10 amount=1.00 normal=(0.825, -0.565) impact=383.4
+087 CORNER HIT row=6 col=8 amount=1.00 normal=(0.925, 0.381) impact=432.6
+088 CORNER HIT row=16 col=14 amount=1.00 normal=(0.417, -0.909) impact=466.2
+089 CORNER HIT row=14 col=14 amount=1.00 normal=(0.231, 0.973) impact=579.1
+090 CORNER HIT row=7 col=21 amount=1.00 normal=(0.780, 0.625) impact=165.3
+091 CORNER HIT row=7 col=21 amount=1.00 normal=(-0.776, 0.630) impact=206.0
+092 CORNER HIT row=7 col=21 amount=1.00 normal=(0.398, 0.917) impact=236.1
+093 CORNER HIT row=11 col=3 amount=1.00 normal=(-0.993, -0.122) impact=1017.4
+094 CORNER HIT row=7 col=21 amount=1.00 normal=(-0.996, 0.090) impact=447.1
+095 CORNER HIT row=2 col=14 amount=1.00 normal=(-0.910, -0.414) impact=376.0
+Unknown level variable: //frictionCoeff
+Unknown level variable: //maxSpin
+Invalid physics level variable: tiltUpSpeed=-100
+Level 27 started
+096 CORNER HIT row=2 col=14 amount=1.00 normal=(-0.773, -0.634) impact=488.9
+097 CORNER HIT row=2 col=10 amount=1.00 normal=(0.990, -0.140) impact=550.1
+098 CORNER HIT row=2 col=14 amount=1.00 normal=(-0.482, -0.876) impact=244.2
+Unknown level variable: //frictionCoeff
+Unknown level variable: //maxSpin
+Invalid physics level variable: tiltUpSpeed=-100
+Level 27 started
+    1800	   1232702 ns/op	  146850 B/op	    4355 allocs/op
+PASS
+ok  	physical	8.034s

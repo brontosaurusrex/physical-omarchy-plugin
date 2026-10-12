@@ -40,28 +40,60 @@ var nativeSounds []map[string]any
 var nativeVisible = true
 var nativeTime float64
 var nativeTunerDirty = true
+var nativeLastRoom string
 
-func nativeSound(kind string, args ...float64) {
-	if !nativeVisible || len(nativeSounds) >= 12 {
-		return
+func nativeRoomSettings() map[string]any {
+	preset, found := audioRoomPresetForName(currentAudioRoom)
+	if !found {
+		preset = defaultAudioRoomPresets["none"]
 	}
-	nativeSounds = append(nativeSounds, map[string]any{"kind": kind, "args": args})
+	dry := preset.defaultDry
+	if currentAudioRoomDry >= 0 {
+		dry = clampFloat(currentAudioRoomDry, 0, 1)
+	}
+	if preset.name == "none" {
+		dry = 1
+	}
+	return map[string]any{
+		"name": preset.name, "dry": dry,
+		"inputType": preset.inputFilterType, "inputHz": preset.inputFrequency, "inputQ": preset.inputQ,
+		"outputType": preset.outputFilterType, "outputHz": preset.outputFrequency, "outputQ": preset.outputQ,
+		"feedbackHz": math.Min(preset.outputFrequency, 5000), "feedbackQ": .45,
+		"delay1": preset.delay1, "delay2": preset.delay2, "delay3": preset.delay3,
+		"gain1": preset.tapGain1, "gain2": preset.tapGain2, "gain3": preset.tapGain3,
+		"feedback": clampFloat(preset.feedback, 0, .75),
+	}
 }
-func nativeFeatureSound(feature string, impactSpeed, pitchScale float64) {
-	if !nativeVisible {
+
+// Carry the original oscillator and sample parameters without quantizing them.
+func nativeTone(kind, wave string, start, end, duration, volume, delay, hitX float64) {
+	if !enableSounds || !nativeVisible || len(nativeSounds) >= 64 {
 		return
 	}
-	event := map[string]any{"kind": "magic", "feature": strings.ToLower(strings.TrimSpace(feature)), "args": []float64{impactSpeed, pitchScale}}
-	if len(nativeSounds) < 12 {
-		nativeSounds = append(nativeSounds, event)
+	nativeSounds = append(nativeSounds, map[string]any{"kind": kind, "wave": wave, "args": []float64{start, end, duration, volume * audioMixerSynths, delay}, "pan": audioPanFromX(hitX)})
+}
+func nativeSampleSound(kind, feature string, impact, pitch, hitX float64) {
+	if !enableSounds || !nativeVisible || len(nativeSounds) >= 64 {
 		return
 	}
-	for i := len(nativeSounds) - 1; i >= 0; i-- {
-		if nativeSounds[i]["feature"] == nil && (nativeSounds[i]["kind"] == "brick" || nativeSounds[i]["kind"] == "magic") {
-			nativeSounds[i] = event
-			return
-		}
+	if pitch <= 0 {
+		pitch = 1
 	}
+	strength := math.Sqrt(clampFloat((impact-minimumCollisionSoundSpeed)/(math.Max(physicsConfig.maxSpeed, minimumCollisionSoundSpeed+1)-minimumCollisionSoundSpeed), 0, 1))
+	rate := audioRand(brickHitPlaybackRateMin, brickHitPlaybackRateMax) * pitch
+	cutoff := (brickHitFilterMinHz + (brickHitFilterMaxHz-brickHitFilterMinHz)*strength) * audioRand(.86, 1.14)
+	cutoff = clampFloat(cutoff, 800, 48000*.45)
+	q := audioRand(.25, .85)
+	gain := (brickHitGainMin + (brickHitGainMax-brickHitGainMin)*strength) * audioRand(.90, 1.08) * audioMixerBricks
+	if feature != "" {
+		rate = audioRand(magicFeaturePlaybackRateMin, magicFeaturePlaybackRateMax) * pitch
+		cutoff = (magicFeatureFilterMinHz + (magicFeatureFilterMaxHz-magicFeatureFilterMinHz)*strength) * audioRand(.90, 1.10)
+		// Preserve the original hard cap (500 Hz), including its clamp order.
+		cutoff = clampFloat(cutoff, 800, magicFeatureHardMaxHz)
+		q = audioRand(.20, .70)
+		gain = (magicFeatureGainMin + (magicFeatureGainMax-magicFeatureGainMin)*strength) * audioRand(.94, 1.06) * audioMixerMagic
+	}
+	nativeSounds = append(nativeSounds, map[string]any{"kind": kind, "feature": strings.ToLower(strings.TrimSpace(feature)), "args": []float64{impact, pitch}, "rate": rate, "gain": gain, "cutoff": cutoff, "q": q, "pan": audioPanFromX(hitX)})
 }
 
 func nativeExportSVG(filename, svg string) bool {
@@ -118,6 +150,7 @@ func handleNativeCommand(c nativeCommand) {
 	switch c.Action {
 	case "hello":
 		nativeTunerDirty = true
+		nativeLastRoom = ""
 	case "tick":
 		if !nativeVisible {
 			return
@@ -192,6 +225,10 @@ func handleNativeCommand(c nativeCommand) {
 		rightPressed = false
 		paddle.vx = 0
 		replayPlaybackDirection = 0
+	case "toggle-sound":
+		toggleSound()
+	case "replay-exit":
+		exitReplay()
 	case "restart":
 		if physicsEditorVisible {
 			closePhysicsEditor()
@@ -242,6 +279,12 @@ func handleNativeCommand(c nativeCommand) {
 		nativeClipboard = physicsEditorClipboardText()
 	}
 }
+func nativeStatus() string {
+	if len(statusMessages) == 0 {
+		return ""
+	}
+	return statusMessages[len(statusMessages)-1].text
+}
 func emitNativeFrame(encoder *json.Encoder, action string) error {
 	if action != "tick" {
 		draw(renderInterpolationAlpha)
@@ -255,11 +298,16 @@ func emitNativeFrame(encoder *json.Encoder, action string) error {
 	}
 	packet := map[string]any{
 		"type": "frame", "action": action, "ops": ops, "caches": caches, "width": canvasWidth, "height": canvasHeight,
-		"state": map[string]any{"level": currentLevelIndex + 1, "levels": len(levels), "lives": lives, "score": score, "paused": paused, "ready": waitingForStart, "gameOver": gameOver, "win": win, "complete": levelAdvancePending, "balls": activeBallCount(), "remaining": remaining, "auto": autoPaddleEnabled, "sound": enableSounds, "volume": nativeVolume, "palette": palette, "fps": fpsCurrent, "replay": replayModeActive, "replayFrames": len(replayFrames), "replayFrame": replayFrameIndex, "replayDirection": replayPlaybackDirection, "replaySpeed": replayPlaybackSpeed, "editor": physicsEditorVisible, "live": physicsEditorLiveSimulation, "debris": debrisEnabled, "debrisPieces": len(brickDebris), "corner": physicsConfig.cornerPhysicsEnabled, "allCorners": physicsConfig.cornerPhysicsAllBricks, "x": ball.x, "y": ball.y, "omega": ball.omega, "physicsSteps": physicsLastFrameSteps},
+		"state": map[string]any{"level": currentLevelIndex + 1, "levels": len(levels), "lives": lives, "score": score, "paused": paused, "ready": waitingForStart, "gameOver": gameOver, "win": win, "complete": levelAdvancePending, "balls": activeBallCount(), "remaining": remaining, "auto": autoPaddleEnabled, "sound": enableSounds, "volume": nativeVolume, "palette": palette, "fps": fpsCurrent, "replay": replayModeActive, "replayFrames": len(replayFrames), "replayFrame": replayFrameIndex, "replayDirection": replayPlaybackDirection, "replaySpeed": replayPlaybackSpeed, "editor": physicsEditorVisible, "live": physicsEditorLiveSimulation, "debris": debrisEnabled, "debrisMaster": debrisMasterEnabled, "debrisPieces": len(brickDebris), "corner": physicsConfig.cornerPhysicsEnabled, "allCorners": physicsConfig.cornerPhysicsAllBricks, "x": ball.x, "y": ball.y, "omega": ball.omega, "physicsSteps": physicsLastFrameSteps, "paddleX": paddle.x, "status": nativeStatus(), "magnet": magnetIsActive(), "zapper": zapperIsActive(), "fpsVisible": fpsMiniOverlayVisible, "fpsLowest": fpsLowest, "diagnostics": []bool{physicsOverlayVisible, debugOverlayVisible, statsOverlayVisible}, "unlocked": devAllLevelsUnlocked},
 	}
 	if nativeTunerDirty {
 		packet["sliders"] = nativeTuner()
 		nativeTunerDirty = false
+	}
+	roomKey := fmt.Sprintf("%s/%g", currentAudioRoom, currentAudioRoomDry)
+	if roomKey != nativeLastRoom {
+		packet["room"] = nativeRoomSettings()
+		nativeLastRoom = roomKey
 	}
 	if len(nativeSounds) > 0 {
 		packet["sounds"] = nativeSounds

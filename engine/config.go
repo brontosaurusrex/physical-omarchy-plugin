@@ -4,7 +4,7 @@ package main
 // game behavior stay in main.go. Build the package (not main.go alone) so this
 // file is included:
 //
-//   GOOS=js GOARCH=wasm go build -o main.wasm .
+//   go build -o ../bin/physical-engine .
 
 const (
 	buildID = "20260820-multiball-01"

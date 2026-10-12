@@ -1,5 +1,9 @@
 # Level 26 performance and stability — 2026-10-12
 
+Historical measurements of the implementation at that time. Later audio,
+control and watchdog changes are documented in [the current audit](audit-2026-10-12.md);
+the values and raw logs below remain unchanged.
+
 Measured on Intel HD Graphics 520, a 1920×1080 display at scale 1.6,
 with Quickshell 0.3.1 and Qt 6.11.2 and the OpenGL renderer. The game window was
 1080×542 logical pixels (a 2:1 playfield inside the four-pixel frame).

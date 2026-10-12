@@ -6,6 +6,8 @@ omarchy plugin validate "$project_dir"
 bash -n "$project_dir/build" "$project_dir/install" "$project_dir/check" "$project_dir/physical-window"
 g++ -O2 -std=c++17 -fPIC "$project_dir/tests/renderer_test.cpp" "$project_dir/bin/pointerlock.o" "$project_dir/bin/protocols/"*.o -I"$project_dir/bin" $(pkg-config --cflags --libs Qt6Quick Qt6Qml Qt6Gui Qt6Multimedia wayland-client) -o "$project_dir/bin/renderer-test"
 QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME= "$project_dir/bin/renderer-test"
+g++ -O2 -std=c++17 -fPIC "$project_dir/tests/audio_mixer_test.cpp" $(pkg-config --cflags --libs Qt6Core Qt6Multimedia) -o "$project_dir/bin/audio-mixer-test"
+"$project_dir/bin/audio-mixer-test"
 if [[ ${PHYSICAL_TEST_WAYLAND:-0} == 1 ]]; then
   g++ -O2 -std=c++17 -fPIC "$project_dir/tests/gpu_bricks_test.cpp" "$project_dir/bin/pointerlock.o" "$project_dir/bin/protocols/"*.o -I"$project_dir/bin" $(pkg-config --cflags --libs Qt6Quick Qt6Qml Qt6Gui Qt6Multimedia wayland-client) -o "$project_dir/bin/gpu-bricks-test"
   QT_QPA_PLATFORM=wayland "$project_dir/bin/gpu-bricks-test"
@@ -14,5 +16,7 @@ fi
 cd "$project_dir/engine"
 go test -buildvcs=false ./...
 go vet -buildvcs=false ./...
+python3 "$project_dir/tests/audio_assets.py"
 python3 "$project_dir/tests/engine_test.py"
 python3 "$project_dir/tests/qml_smoke.py"
+python3 "$project_dir/tests/keyboard.py"

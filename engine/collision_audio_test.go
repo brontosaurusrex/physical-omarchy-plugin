@@ -2,6 +2,27 @@ package main
 
 import "testing"
 
+func TestNativeRoomFallbacks(t *testing.T) {
+	oldName, oldDry := currentAudioRoom, currentAudioRoomDry
+	t.Cleanup(func() { currentAudioRoom, currentAudioRoomDry = oldName, oldDry })
+	currentAudioRoom, currentAudioRoomDry = "room_small", -1
+	settings := nativeRoomSettings()
+	if settings["name"] != "smallroom" || settings["dry"] != .78 {
+		t.Fatalf("alias/default mix lost: %v", settings)
+	}
+	currentAudioRoomDry = .25
+	if nativeRoomSettings()["dry"] != .25 {
+		t.Fatal("level dry override ignored")
+	}
+	for _, name := range []string{"none", "unknown-preset"} {
+		currentAudioRoom = name
+		settings = nativeRoomSettings()
+		if settings["name"] != "none" || settings["dry"] != float64(1) {
+			t.Fatalf("dry/unknown preset leaked wet audio: %v", settings)
+		}
+	}
+}
+
 func TestNativeContactAudio(t *testing.T) {
 	oldSounds, oldEnabled, oldVisible := nativeSounds, enableSounds, nativeVisible
 	oldBricks, oldPaddle, oldWidth, oldHeight := bricks, paddle, canvasWidth, canvasHeight
@@ -37,7 +58,11 @@ func TestNativeContactAudio(t *testing.T) {
 			nativeSounds = nil
 			b := scenario.ball
 			updateBallStep(&b, physicsStepSeconds, false)
-			if len(nativeSounds) != 1 || nativeSounds[0]["kind"] != scenario.kind {
+			want := 1
+			if scenario.kind == "paddle" {
+				want = 2
+			}
+			if len(nativeSounds) != want || nativeSounds[0]["kind"] != scenario.kind {
 				t.Fatalf("contact produced %v, want %s", nativeSounds, scenario.kind)
 			}
 			if b.soundCooldown <= 0 {
@@ -73,14 +98,6 @@ func TestNativePowerupAudioIdentity(t *testing.T) {
 		}
 	}
 	nativeSounds = nil
-	for i := 0; i < 12; i++ {
-		nativeSound("brick")
-	}
-	playMagicFeature("blackhole", 500, 1, 300)
-	if len(nativeSounds) != 12 || nativeSounds[11]["feature"] != "blackhole" {
-		t.Fatal("feature cue was lost in a full collision queue")
-	}
-	nativeSounds = nil
 	enableSounds = false
 	playMagicFeature("blackhole", 500, 1, 300)
 	if len(nativeSounds) != 0 {
@@ -90,5 +107,45 @@ func TestNativePowerupAudioIdentity(t *testing.T) {
 	playMagicFeature("blackhole", 500, 1, 300)
 	if len(nativeSounds) != 0 {
 		t.Fatal("hidden powerup emitted sound")
+	}
+}
+
+func TestNativeSynthParametersAndBrickBudget(t *testing.T) {
+	oldSounds, oldEnabled, oldVisible, oldWidth, oldStarts := nativeSounds, enableSounds, nativeVisible, canvasWidth, brickHitStartsThisFrame
+	t.Cleanup(func() {
+		nativeSounds, enableSounds, nativeVisible, canvasWidth, brickHitStartsThisFrame = oldSounds, oldEnabled, oldVisible, oldWidth, oldStarts
+	})
+	nativeSounds = nil
+	enableSounds = true
+	nativeVisible = true
+	canvasWidth = 800
+	scheduleTonePanned("sawtooth", 920, 280, .08, .08, .012, 0)
+	event := nativeSounds[0]
+	args := event["args"].([]float64)
+	if event["wave"] != "sawtooth" || args[0] != 920 || args[1] != 280 || args[2] != .08 || args[3] != .08*audioMixerSynths || args[4] != .012 || event["pan"] != -.75 {
+		t.Fatalf("lost oscillator parameters: %v", event)
+	}
+	nativeSounds = nil
+	brickHitStartsThisFrame = 0
+	playMagicPitched(500, 1.32, 800)
+	if len(nativeSounds) != 2 || nativeSounds[0]["wave"] != "sine" || nativeSounds[1]["wave"] != "triangle" {
+		t.Fatalf("magic hit must use original generated pair: %v", nativeSounds)
+	}
+	first := nativeSounds[0]["args"].([]float64)[0]
+	if first < 660*1.32*.94 || first > 660*1.32*1.06 {
+		t.Fatalf("zapper magic pitch lost: %f", first)
+	}
+	nativeSounds = nil
+	brickHitStartsThisFrame = 0
+	for i := 0; i < 10; i++ {
+		playBrickBreakPitched(500, 1, 400)
+	}
+	if len(nativeSounds) != brickHitMaxStartsPerFrame {
+		t.Fatalf("brick burst budget: %d", len(nativeSounds))
+	}
+	nativeSounds = nil
+	playMagicFeature("blackhole", 500, 1, 0)
+	if nativeSounds[0]["cutoff"] != magicFeatureHardMaxHz || nativeSounds[0]["pan"] != -.75 {
+		t.Fatalf("feature filter/pan differs from source: %v", nativeSounds[0])
 	}
 }

@@ -1,0 +1,5 @@
+DEBUG qml: PERF 1 paintedFPS 10.01 level 26 replies 21 balls 3 replayFrames 0 engineFPS 10.101459615717722 debris 0 remaining 660 transition true
+DEBUG qml: PERF 2 paintedFPS 21.34 level 26 replies 47 balls 3 replayFrames 54 engineFPS 20.169769097759826 debris 150 remaining 623 transition false
+PERF INJECT: stopped engine process 34200
+DEBUG qml: PERF 3 paintedFPS 22.32 level 26 replies 42 balls 3 replayFrames 105 engineFPS 22.74593338079142 debris 150 remaining 552 transition false
+ERROR qml: PERF FAILED: engine replies stalled

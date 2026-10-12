@@ -23,7 +23,7 @@ textColor=#e7e9ec
 secondBallSpinColor=#8d939b
 audioRoom=space
 audioRoomDry=0.50
-title="SLAY"
+title="P H Y S I C A L"
 ---
                   %MM%M                  
                %%%M% MMM                 

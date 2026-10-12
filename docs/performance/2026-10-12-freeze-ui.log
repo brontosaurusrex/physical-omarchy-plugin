@@ -1,0 +1,5 @@
+DEBUG qml: PERF 1 paintedFPS 11.00 level 26 replies 21 balls 3 replayFrames 0 engineFPS 9.992153759210721 debris 0 remaining 660 transition true
+DEBUG qml: PERF 2 paintedFPS 61.60 level 26 replies 60 balls 3 replayFrames 32 engineFPS 34.29789525012727 debris 150 remaining 639 transition false
+PERF INJECT: stopped ui process 38975
+DEBUG qml: PERF 3 paintedFPS 56.22 level 26 replies 58 balls 4 replayFrames 62 engineFPS 48.40816766935998 debris 150 remaining 618 transition false
+PERF FAILED: external heartbeat watchdog timed out

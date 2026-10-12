@@ -760,6 +760,7 @@ var (
 	debrisPath2DSupported      bool
 	debrisPath2DConstructor    js.Value
 	brickGrid                  map[int][]int
+	brickGridCells             [][]int // Direct cell lookup for frequent debris field queries.
 	remainingBreakableBricks   int
 	initialBreakableBricks     int
 	lastBrickSoundPlayed       bool
@@ -1806,7 +1807,11 @@ func gridKey(row, col int) int {
 
 func registerBrick(index int) {
 	br := &bricks[index]
-	brickGrid[gridKey(br.row, br.col)] = append(brickGrid[gridKey(br.row, br.col)], index)
+	key := gridKey(br.row, br.col)
+	brickGrid[key] = append(brickGrid[key], index)
+	if key >= 0 && key < len(brickGridCells) {
+		brickGridCells[key] = append(brickGridCells[key], index)
+	}
 	if !br.unbreakable {
 		remainingBreakableBricks++
 	}
@@ -2958,7 +2963,7 @@ func scheduleTonePanned(
 	hitX float64,
 ) {
 	if enableSounds {
-		nativeSound("tone", startFreq, endFreq, duration, volume, delay)
+		nativeTone("tone", oscType, startFreq, endFreq, duration, volume, delay, hitX)
 	}
 }
 
@@ -2986,15 +2991,12 @@ func varyFreq(freq float64, amount float64) float64 {
 }
 
 func playWallHit() {
-	if enableSounds {
-		nativeSound("wall")
-	}
+	nativeTone("wall", "triangle", varyFreq(230, 0.10), varyFreq(175, 0.10), audioRand(0.038, 0.055), audioRand(0.11, 0.16), 0, canvasWidth/2)
 }
 
 func playPaddleHit() {
-	if enableSounds {
-		nativeSound("paddle")
-	}
+	nativeTone("paddle", "triangle", varyFreq(180, 0.08), varyFreq(320, 0.08), audioRand(0.065, 0.085), audioRand(0.16, 0.22), 0, canvasWidth/2)
+	nativeTone("paddle", "sine", varyFreq(90, 0.06), varyFreq(70, 0.06), audioRand(0.08, 0.11), audioRand(0.05, 0.08), 0, canvasWidth/2)
 }
 
 // Ball-ball impacts use a short, light metallic/glass-like tick. Loudness and
@@ -3171,7 +3173,11 @@ func playSampledBrickImpact(
 
 func playBrickBreakPitched(impactSpeed, pitchScale, hitX float64) {
 	if enableSounds {
-		nativeSound("brick", impactSpeed, pitchScale)
+		if brickHitStartsThisFrame >= brickHitMaxStartsPerFrame {
+			return
+		}
+		brickHitStartsThisFrame++
+		nativeSampleSound("brick", "", impactSpeed, pitchScale, hitX)
 	}
 }
 
@@ -3200,6 +3206,7 @@ func retireMagicFeatureVoice(voice *magicFeatureVoice, now float64) {
 }
 
 func stopMagicFeatureVoice(feature string) {
+	nativeSounds = append(nativeSounds, map[string]any{"kind": "stop-feature", "feature": strings.ToLower(strings.TrimSpace(feature))})
 	feature = strings.ToLower(strings.TrimSpace(feature))
 	voice := magicFeatureVoices[feature]
 	if voice == nil {
@@ -3215,6 +3222,7 @@ func stopMagicFeatureVoice(feature string) {
 }
 
 func stopAllMagicFeatureVoices() {
+	nativeSounds = append(nativeSounds, map[string]any{"kind": "stop-features"})
 	for feature := range magicFeatureVoices {
 		stopMagicFeatureVoice(feature)
 	}
@@ -3222,13 +3230,17 @@ func stopAllMagicFeatureVoices() {
 
 func playMagicFeature(feature string, impactSpeed, pitchScale, hitX float64) {
 	if enableSounds {
-		nativeFeatureSound(feature, impactSpeed, pitchScale)
+		nativeSampleSound("magic", feature, impactSpeed, pitchScale, hitX)
 	}
 }
 
 func playMagicPitched(impactSpeed, pitchScale, hitX float64) {
 	if enableSounds {
-		nativeSound("magic", impactSpeed, pitchScale)
+		if brickHitStartsThisFrame >= brickHitMaxStartsPerFrame {
+			return
+		}
+		brickHitStartsThisFrame++
+		playSynthMagicPitched(pitchScale, hitX)
 	}
 }
 
@@ -4106,6 +4118,7 @@ func resolveCollisionDebug(
 func buildBricksFromLevel(lvl levelData, levelIndex int) {
 	bricks = nil
 	brickGrid = make(map[int][]int)
+	brickGridCells = nil
 	remainingBreakableBricks = 0
 	lastBrickSoundPlayed = false
 	if len(lvl.layout) == 0 {
@@ -4152,6 +4165,7 @@ func buildBricksFromLevel(lvl levelData, levelIndex int) {
 	gridCellWidth = scaledWidth + scaledPadding
 	gridCellHeight = scaledHeight + scaledPadding
 	gridRows, gridCols = rows, cols
+	brickGridCells = make([][]int, gridRows*gridCols)
 
 	for row := 0; row < rows; row++ {
 		line := strings.TrimRight(lvl.layout[row], " ")
@@ -4199,6 +4213,7 @@ func buildBricksFromLevel(lvl levelData, levelIndex int) {
 func initBricksDefault(levelIndex int) {
 	bricks = nil
 	brickGrid = make(map[int][]int)
+	brickGridCells = nil
 	remainingBreakableBricks = 0
 	lastBrickSoundPlayed = false
 
@@ -4233,6 +4248,7 @@ func initBricksDefault(levelIndex int) {
 	gridCellWidth = scaledWidth + scaledPadding
 	gridCellHeight = scaledHeight + scaledPadding
 	gridRows, gridCols = brickRows, brickCols
+	brickGridCells = make([][]int, gridRows*gridCols)
 
 	rand.Seed(1)
 	for row := 0; row < brickRows; row++ {
@@ -7060,9 +7076,17 @@ func nearestMagneticBrickForDebris(x, y float64) (float64, float64, float64, boo
 		maxCol = min(gridCols-1, maxCol)
 		minRow = max(0, minRow)
 		maxRow = min(gridRows-1, maxRow)
+		direct := len(brickGridCells) == gridRows*gridCols
 		for row := minRow; row <= maxRow; row++ {
 			for col := minCol; col <= maxCol; col++ {
-				for _, index := range brickGrid[gridKey(row, col)] {
+				key := gridKey(row, col)
+				var indices []int
+				if direct {
+					indices = brickGridCells[key]
+				} else {
+					indices = brickGrid[key]
+				}
+				for _, index := range indices {
 					consider(index)
 				}
 			}
