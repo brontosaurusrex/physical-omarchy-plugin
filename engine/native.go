@@ -287,7 +287,11 @@ func nativeStatus() string {
 }
 func emitNativeFrame(encoder *json.Encoder, action string) error {
 	if action != "tick" {
-		draw(renderInterpolationAlpha)
+		if replayModeActive {
+			drawReplayCurrentFrame()
+		} else {
+			draw(renderInterpolationAlpha)
+		}
 	}
 	ops, caches := js.Frame()
 	remaining := 0

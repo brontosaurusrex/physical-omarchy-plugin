@@ -33,7 +33,9 @@ room graph now retains the original preset parameters and routing. Native DSP,
 and output scheduling remain fidelity limits, listed in
 [the audio/control audit](docs/audit-2026-10-12.md).
 
-Desktop adaptations include Escape closing the plugin, Space+F fullscreen,
-Shift+K / a menu button leaving replay, and a usable sound toggle on Ready and
-in menus. The first level's Ready title is “P H Y S I C A L” in the port. These
+Desktop adaptations include Escape leaving replay (closing the plugin during
+live play), Space+F fullscreen, Shift+K / a menu button leaving replay, and a
+usable sound toggle on Ready and in menus. Replay uses the same antialiased
+brick meshes as live play, with a separate cache for recorded visibility.
+The first level's Ready title is “P H Y S I C A L” in the port. These
 are native UI/content changes; the original source is not edited.

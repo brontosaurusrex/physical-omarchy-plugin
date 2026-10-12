@@ -1,5 +1,12 @@
 package main
 
+import js "physical/internal/qtbridge"
+
+func drawBrickBatch(target js.Value, data []float64, tilt bool) {
+	target.Call("bricks", data, tilt, brickRadius,
+		palette[2], brickStrokeColor, magicColor, magicStrokeColor, palette[6], unbreakableStrokeColor)
+}
+
 // One compact brick batch replaces thousands of canvas commands on every
 // cache rebuild. The renderer keeps the original palette, radius and tilt.
 func drawBrickCanvasBatch() bool {
@@ -18,7 +25,6 @@ func drawBrickCanvasBatch() bool {
 		}
 		data = append(data, br.x, br.y, br.w, br.h, br.tiltRadians, flags)
 	}
-	brickCtx.Call("bricks", data, physicsConfig.drawBrickTilt, brickRadius,
-		palette[2], brickStrokeColor, magicColor, magicStrokeColor, palette[6], unbreakableStrokeColor)
+	drawBrickBatch(brickCtx, data, physicsConfig.drawBrickTilt)
 	return true
 }

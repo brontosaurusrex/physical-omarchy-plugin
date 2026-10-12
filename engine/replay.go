@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	js "physical/internal/qtbridge"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -79,7 +80,20 @@ var (
 	replayPlaybackSpeed     = 1.0
 	replayPlaybackAccum     float64
 	replayReturnPaused      bool
+
+	// A separate cache keeps scrubbing from changing the live brick mesh.
+	replayBrickCanvas     js.Value
+	replayBrickCtx        js.Value
+	replayBrickCacheAlive []uint64
+	replayBrickCacheStyle replayBrickCacheSettings
+	replayBrickCacheValid bool
 )
+
+type replayBrickCacheSettings struct {
+	width, height, radius float64
+	tilt                  bool
+	colors                [6]string
+}
 
 func replayFrameInterval() float64 {
 	if defaultReplayFPS <= 0 {
@@ -100,6 +114,7 @@ func replayAvailable() bool {
 }
 
 func beginReplayRecording(levelIndex int) {
+	replayBrickCacheValid = false
 	if replayModeActive {
 		replayModeActive = false
 	}
@@ -502,37 +517,39 @@ func drawReplayBricks(frame *replayFrame) {
 	if frame == nil {
 		return
 	}
-	for kind := 0; kind < 3; kind++ {
+	if replayBrickCanvas.IsUndefined() || replayBrickCanvas.IsNull() {
+		replayBrickCanvas = doc.Call("createElement", "canvas")
+		replayBrickCtx = replayBrickCanvas.Call("getContext", "2d")
+	}
+	style := replayBrickCacheSettings{
+		width: canvasWidth, height: canvasHeight, radius: brickRadius,
+		tilt:   frame.drawBrickTilt,
+		colors: [6]string{palette[2], brickStrokeColor, magicColor, magicStrokeColor, palette[6], unbreakableStrokeColor},
+	}
+	if !replayBrickCacheValid || style != replayBrickCacheStyle || !slices.Equal(frame.brickAlive, replayBrickCacheAlive) {
+		replayBrickCanvas.Set("width", int(canvasWidth))
+		replayBrickCanvas.Set("height", int(canvasHeight))
+		replayBrickCtx.Call("clearRect", 0, 0, canvasWidth, canvasHeight)
+		data := make([]float64, 0, len(replayBrickDefs)*6)
 		for i, def := range replayBrickDefs {
 			if !replayBrickIsAlive(frame, i) {
 				continue
 			}
-			matches := (kind == 0 && !def.magic && !def.unbreakable) ||
-				(kind == 1 && def.magic && !def.unbreakable) ||
-				(kind == 2 && def.unbreakable)
-			if !matches {
-				continue
+			flags := 0.0
+			if def.magic {
+				flags = 1
 			}
-			fill, stroke, width := replayBrickStyle(def)
-			ctx.Call("save")
-			ctx.Set("fillStyle", fill)
-			ctx.Set("strokeStyle", stroke)
-			ctx.Set("lineWidth", width)
-			ctx.Call("beginPath")
-			if frame.drawBrickTilt {
-				cx := float64(def.x + def.w/2)
-				cy := float64(def.y + def.h/2)
-				ctx.Call("translate", cx, cy)
-				ctx.Call("rotate", float64(def.tilt))
-				ctx.Call("roundRect", -float64(def.w)/2, -float64(def.h)/2, float64(def.w), float64(def.h), brickRadius)
-			} else {
-				ctx.Call("roundRect", float64(def.x), float64(def.y), float64(def.w), float64(def.h), brickRadius)
+			if def.unbreakable {
+				flags = 2
 			}
-			ctx.Call("fill")
-			ctx.Call("stroke")
-			ctx.Call("restore")
+			data = append(data, float64(def.x), float64(def.y), float64(def.w), float64(def.h), float64(def.tilt), flags)
 		}
+		drawBrickBatch(replayBrickCtx, data, frame.drawBrickTilt)
+		replayBrickCacheAlive = append(replayBrickCacheAlive[:0], frame.brickAlive...)
+		replayBrickCacheStyle = style
+		replayBrickCacheValid = true
 	}
+	ctx.Call("drawImage", replayBrickCanvas, 0, 0)
 }
 
 func traceReplayDebrisShape(target js.Value, shape replayDebrisShape) {

@@ -13,7 +13,7 @@ Rectangle {
     radius: Style.cornerRadius
     function key(key, code) { controller.closeMenu(); controller.shortcut(key, code); }
     Keys.onPressed: function(event) {
-        if (event.key === Qt.Key_Escape) { root.controller.dismiss(); event.accepted = true; }
+        if (event.key === Qt.Key_Escape) { if (!event.isAutoRepeat) root.controller.handleEscape(); event.accepted = true; }
     }
     MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons; }
     QQC.ScrollView {
@@ -76,7 +76,7 @@ Rectangle {
             Text {
                 Layout.fillWidth: true
                 visible: root.controller.helpVisible
-                text: "Mouse / ← → / A D   Move paddle\nRight click   Capture / release mouse\nSpace / Enter / click   Start or continue\nSpace   Pause / resume\nSpace + F   Fullscreen\nPage Up / Down   Unlocked levels\nO   Automatic paddle (assisted)\nR   Debris    S   Sound\nM / Z   Magnets / zapper    2   Extra ball    T   Rescue\nP / I   Diagnostics    F   Engine FPS\nShift + F   Reset lowest FPS    U   Temporary level unlock\nE   Physics lab\n\nJ / K / L   Reverse / pause / forward replay\n← → / Home / End   Scrub replay\nShift + K / Exit replay button   Return to game\nEsc   Close window and release mouse\nV / B   Export SVG / SVG with trails\n\n?   Controls    Q   Close (outside lab)\nSwitching windows pauses the game."
+                text: "Mouse / ← → / A D   Move paddle\nRight click   Capture / release mouse\nSpace / Enter / click   Start or continue\nSpace   Pause / resume\nSpace + F   Fullscreen\nPage Up / Down   Unlocked levels\nO   Automatic paddle (assisted)\nR   Debris    S   Sound\nM / Z   Magnets / zapper    2   Extra ball    T   Rescue\nP / I   Diagnostics    F   Engine FPS\nShift + F   Reset lowest FPS    U   Temporary level unlock\nE   Physics lab\n\nJ / K / L   Reverse / pause / forward replay\n← → / Home / End   Scrub replay\nShift + K / Exit replay button   Return to game\nEsc   Exit replay; otherwise close window and release mouse\nV / B   Export SVG / SVG with trails\n\n?   Controls    Q   Close (outside lab)\nSwitching windows pauses the game."
                 color: Color.foreground
                 font.family: Style.fontFamily
                 font.pixelSize: Style.font.bodySmall

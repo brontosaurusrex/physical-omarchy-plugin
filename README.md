@@ -13,6 +13,7 @@ preloaded samples and generated collision tones, avoiding stream restarts during
 The initial window is limited to 90% of the display width and height, keeps the
 game aspect ratio, and opens centered horizontally directly beneath the top bar.
 Qt uses the monitor scale for high-DPI rendering; the 1280-pixel window cap is in logical pixels.
+The first level's Ready screen is titled **P H Y S I C A L**.
 
 ## Install
 
@@ -50,7 +51,7 @@ an explicit resume. A shell restart resets the live game and RAM replay.
 | Space + F / fullscreen button | Toggle fullscreen |
 | Space / Enter / click | Start, retry after game over, or advance after a clear |
 | Space | Pause/resume |
-| Escape | Close window, release mouse and pause game |
+| Escape | Exit replay; otherwise close window, release mouse and pause game |
 | Page Up / Page Down | Navigate unlocked levels |
 | O | Automatic paddle; marks the run assisted |
 | R / S | Toggle debris / sound |
@@ -61,9 +62,13 @@ an explicit resume. A shell restart resets the live game and RAM replay.
 | E | Native physics/debris lab |
 | J / K / L | Reverse / pause / forward replay |
 | Left/right arrows / Home / End in replay | Scrub |
-| Shift + K / Exit replay menu button | Return from replay to the game |
+| Escape / Shift + K / Exit replay menu button | Return from replay to the game |
 | V / B | Export SVG / SVG motion trails |
 | ? / Q | Controls in menu / close plugin (Q is ignored in the physics lab) |
+
+Replay uses the same antialiased brick meshes as live play, with a separate cache
+for recorded brick visibility. Returning from replay preserves the live game and
+keeps the window open, including fullscreen.
 
 The physics lab exposes the original engine's physics, debris, and auto-paddle
 sliders. Copy settings exports the original configuration text to the clipboard.
@@ -82,10 +87,10 @@ graphics compatibility.
 - `Physical.qml`: plugin lifecycle, floating window, input, theme, native process.
 - `BallWidget.qml`: Omarchy bar integration.
 - `GameCanvas.qml` / `native/renderer.cpp`: a compiled Qt drawing module. It parses
-  drawing packets in C++, batches debris into scene graph triangles, records
-  other native QPainter commands, caches the static
-  brick layer, and paints through an OpenGL framebuffer on the normal Omarchy
-  renderer. Rounded bricks, debris and zapper glow use GPU triangles; brick
+  drawing packets in C++ and draws rounded bricks, debris and zapper glow
+  through GPU triangle batches. The background uses an OpenGL framebuffer;
+  remaining moving objects and game text are painted by QPainter into an image
+  texture for the GPU to display. Brick
   contours are cached and their edge coverage follows display scale. Large
   meshes are split into triangle chunks to preserve every brick. The
   software painter remains available for headless checks. Debris keeps its
@@ -122,11 +127,20 @@ Magnetic debris uses direct brick-grid cell lookup to reduce engine CPU work.
 Regression tests compare its results with the original map lookup; the current
 audit records a controlled comparison on levels 23, 26 and 27.
 
+The latest installed build completed a **15-minute** stress test on Intel HD
+Graphics 520, cycling levels 23, 26 and 27 with sound and dense effects enabled.
+It averaged **59.6 painted FPS**, with a lowest gameplay sample of **53.8 FPS**
+and no detected crash or freeze. The direct-grid optimization reduced engine
+CPU time by **30–33%** in a separate controlled benchmark. These are native
+measurements; the browser version has not been benchmarked directly against this
+build. The [audit](docs/audit-2026-10-12.md) includes raw logs, startup samples
+and test limits.
+
 Mobile/browser-specific
 features (touch-mode selector, device tilt,
 and the browser Gamepad API) are not part of this desktop port. Standard Omarchy
 window controls handle moving and resizing. Fullscreen is available in the game;
-right click captures the mouse through Wayland, and Escape closes the window and releases it.
+right click captures the mouse through Wayland, and Escape exits replay or closes the live window and releases capture.
 
 ## Validation
 
@@ -135,9 +149,10 @@ right click captures the mouse through Wayland, and Escape closes the window and
 ```
 
 Checks include native triangulation and depth-order regressions, the original
-collision/buffer regressions, all 33 levels, live
+collision/buffer regressions, 3,000 magnetic-debris grid comparisons, native
+audio/room PCM checks, sample-bank hashes, all 33 levels, live
 level palettes, saved volume, native physics, replay and SVG export, the native tuner,
-hidden-window pause, progression, and a real-Quickshell UI smoke test plus 51 control checks through Qt input.
+hidden-window pause, progression, and a real-Quickshell UI smoke test plus 60 control checks through Qt input.
 For a real display FPS measurement, run
 `PHYSICAL_TEST_WAYLAND=1 python3 tests/qml_smoke.py`; this opens a temporary test
 window for a few seconds and prints its painted frame rate.
@@ -166,8 +181,12 @@ It works even when the Qt UI thread is frozen. Logs include engine reply counts.
 For a longer rotating torture test with repeated dense destruction:
 
 ```sh
-PHYSICAL_TEST_WAYLAND=1 PHYSICAL_PERF_LEVELS=23,26,27 PHYSICAL_PERF_SECONDS=600 PHYSICAL_PERF_RESTART_SECONDS=30 GODEBUG=randseednop=0 python3 tests/performance.py
+PHYSICAL_TEST_WAYLAND=1 PHYSICAL_PERF_LEVELS=23,26,27 PHYSICAL_PERF_SECONDS=900 PHYSICAL_PERF_RESTART_SECONDS=30 GODEBUG=randseednop=0 python3 tests/performance.py
 ```
+
+To test the installed copy, add
+`PHYSICAL_PERF_PROJECT="$HOME/.config/omarchy/plugins/b.physical"`; otherwise the
+harness copies the current project build.
 
 `PHYSICAL_PERF_INJECT_FREEZE=ui` or `engine` deliberately stops the isolated
 test process after its third sample to verify failure detection. UI injection

@@ -51,11 +51,18 @@ Item {
     }
     function closeMenu() { menuVisible = false; helpVisible = false; focusGame(); }
     function toggleFullscreen() { pointerLock.release(); panel.fullscreen = !panel.fullscreen; focusGame(); }
+    function handleEscape() {
+        if (state.replay) {
+            pointerLock.release();
+            closeMenu();
+            send({action:"replay-exit"});
+        } else dismiss();
+    }
     function pressKey(event) {
         if (event.key === Qt.Key_Space) { if (!event.isAutoRepeat) { spaceHeld = true; fullscreenChord = false; } return; }
         if (event.key === Qt.Key_F && spaceHeld) { if (!event.isAutoRepeat) { toggleFullscreen(); fullscreenChord = true; } return; }
         if (event.key === Qt.Key_Question) { if (!menuVisible) toggleMenu(); helpVisible = !helpVisible; return; }
-        if (event.key === Qt.Key_Escape) { dismiss(); return; }
+        if (event.key === Qt.Key_Escape) { if (!event.isAutoRepeat) handleEscape(); return; }
         if (event.key === Qt.Key_Q && !state.editor) { dismiss(); return; }
         if (event.key === Qt.Key_S && !event.isAutoRepeat && !menuVisible && !state.editor) { send({action:"toggle-sound"}); return; }
         if (event.key === Qt.Key_K && (event.modifiers & Qt.ShiftModifier) && state.replay) { send({action:"replay-exit"}); return; }
@@ -223,7 +230,7 @@ Item {
             color: panel.color
             borderSpec: panel.fullscreen ? Border.none() : Border.surfaceSpec("menu", "border", Color.menu.border, Math.max(1, Style.normalBorderWidth))
             radius: panel.fullscreen ? 0 : Style.cornerRadius
-            Shortcut { sequence: "Escape"; context: Qt.WindowShortcut; enabled: root.opened; autoRepeat: false; onActivated: root.dismiss(); }
+            Shortcut { sequence: "Escape"; context: Qt.WindowShortcut; enabled: root.opened; autoRepeat: false; onActivated: root.handleEscape(); }
             FrameAnimation { running: root.animating; onTriggered: root.tick(); }
             Item {
                 id: playArea

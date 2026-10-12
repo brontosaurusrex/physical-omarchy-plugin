@@ -89,6 +89,8 @@ ShellRoot {
             } else if (root.phase === 11 && game.state.volume === 0.37) {
                 game.closeMenu(); game.shortcut("k"); root.phase = 2;
             } else if (root.phase === 2 && game.state.replay) {
+                capture("physical-replay"); root.phase = 12;
+            } else if (root.phase === 12) {
                 game.send({action:"replay-exit"}); game.shortcut("e"); root.phase = 3;
             } else if (root.phase === 3 && game.state.editor) {
                 var gravity = findItem(game.contentView, "physics-gravity");

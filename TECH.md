@@ -9,7 +9,7 @@ Physical is a native Linux game packaged as an Omarchy shell plugin.
 | **C++ / Qt** (`native/renderer.cpp`) | Reads the engine's drawing packets, prepares geometry, caches brick shapes and draws the game through Qt's scene graph and QPainter. |
 | **GPU / OpenGL** | Draws batches of triangles for bricks, debris and zapper glow, blends their edges, and displays textures and the interface. |
 | **Qt Multimedia** (`native/audiomixer.h`, `native/audioroom.h`, `AudioPool.qml`) | Mixes stereo PCM samples and generated oscillator tones into one persistent output stream. Ordinary bricks pick random samples; power-ups have individual cues. Pitch, filters, gain, stereo pan and per-level room echoes run on the CPU. |
-| **Wayland** (`native/pointerlock.cpp`) | Talks to the compositor to capture the mouse and receive relative movement. Right click toggles capture; Esc closes the window and releases it. |
+| **Wayland** (`native/pointerlock.cpp`) | Talks to the compositor to capture the mouse and receive relative movement. Right click toggles capture; Esc exits replay, or closes the window and releases capture during live play. |
 | **Omarchy / Quickshell** | Loads the plugin, supplies the bar and themed controls, and hosts the Qt interface. |
 
 ## CPU versus GPU
@@ -21,7 +21,10 @@ remaining content, including game text, into textures.
 The **GPU** turns geometry and textures into screen pixels. It does not run the
 game's physics. Cached brick meshes and batched effects reduce repeated painting
 and draw overhead. Large triangle meshes are split into smaller chunks so dense
-levels do not lose bricks at an index limit.
+levels do not lose bricks at an index limit. Replay uses this same antialiased
+brick-mesh path with its own cache, rebuilt only when recorded brick visibility,
+tilt or styling changes. Replay transport commands draw the selected recorded
+frame even while playback is paused; exiting restores the live cache.
 
 Each frame follows this path:
 
