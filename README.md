@@ -72,6 +72,9 @@ SVG exports go to `~/Pictures/Physical/`. Replay stays in RAM.
 
 ## Architecture
 
+See [TECH.md](TECH.md) for a short explanation of the stack, CPU/GPU work and
+graphics compatibility.
+
 - `Physical.qml`: plugin lifecycle, floating window, input, theme, native process.
 - `BallWidget.qml`: Omarchy bar integration.
 - `GameCanvas.qml` / `native/renderer.cpp`: a compiled Qt drawing module. It parses
