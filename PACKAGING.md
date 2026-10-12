@@ -33,7 +33,9 @@ sha256sum -c SHA256SUMS
 ```
 
 The installer checks the bundle, offers any missing runtime packages, copies it
-to `~/.config/omarchy/plugins/b.physical`, enables it and restarts the shell.
+to `~/.config/omarchy/plugins/b.physical`, restarts the shell, waits for its
+plugin scan to discover Physical, and then enables it. This also works after
+removing the plugin through Omarchy.
 Saved progress is kept. Restarting the shell resets an active game and its RAM
 replay. Go, GCC, pkgconf and Wayland build tools are unnecessary in prebuilt mode.
 

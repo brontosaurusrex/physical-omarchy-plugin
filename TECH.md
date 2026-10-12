@@ -72,7 +72,8 @@ Arch build/runtime packages. Qt, Quickshell and the graphics/audio drivers are
 needed at runtime. Go and the C++ compiler are needed to build from source,
 but not to execute an already-built game. `./package` creates prebuilt bundles;
 `./install --prebuilt` installs a plugin bundle without compiling. The installer
-restarts the shell after copying the native module.
+restarts the shell after copying the native module, then waits up to 15 seconds
+for asynchronous plugin discovery before enabling Physical.
 
 The plugin's `Plugin.qml` uses a short Python setup process to update its local
 `native/qmldir` library path before loading `Physical.qml`. Quickshell cannot

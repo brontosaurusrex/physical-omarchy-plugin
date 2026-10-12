@@ -28,10 +28,11 @@ cd ~/source/physical-omarchy-plugin
 ./install
 ```
 
-This installs a copy into `~/.config/omarchy/plugins/b.physical`, rescans plugins,
-and enables a solid foreground-colored ball button in the center section of the Omarchy bar. Re-run `./install`
-after editing the source. The installer restarts the shell so Qt loads the
-new native module; this resets an active game and RAM replay. Omarchy does not accept
+This installs a copy into `~/.config/omarchy/plugins/b.physical`, restarts the shell,
+waits for plugin discovery, and enables a solid foreground-colored ball button
+in the center section of the Omarchy bar. Re-run `./install` after editing the
+source. Restarting loads the new native module and resets an active game and
+RAM replay. Omarchy does not accept
 symlinked plugin packages.
 
 ```bash
@@ -186,7 +187,8 @@ hidden-window pause, progression, and a real-Quickshell UI smoke test plus 60 co
 `python3 tests/standalone.py` checks the independent Qt host with isolated progress.
 `PHYSICAL_TEST_BOOTSTRAP=1 python3 tests/qml_smoke.py` checks the plugin's native-library setup after relocation.
 `python3 tests/packaging.py` checks archives, checksums, prebuilt installation,
-standalone installation and progress-preserving removal.
+plugin removal/reinstallation, delayed discovery and its timeout, standalone
+installation and progress-preserving removal.
 For a real display FPS measurement, run
 `PHYSICAL_TEST_WAYLAND=1 python3 tests/qml_smoke.py`; this opens a temporary test
 window for a few seconds and prints its painted frame rate.

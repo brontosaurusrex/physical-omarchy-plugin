@@ -98,7 +98,23 @@ cp -a "$project_dir/native/setup-module.py" "$target_dir/native/setup-module.py"
 printf 'plugin physicalrenderer %s/native\n' "$target_dir" > "$target_dir/native/qmldir"
 fi
 omarchy plugin validate "$target_dir"
-omarchy-shell shell rescanPlugins
-omarchy plugin enable b.physical
+# Restart first to load the new native module. A shell can answer IPC before
+# its asynchronous manifest scan finishes, so wait for registration to enable.
 omarchy restart shell
+echo 'Waiting for Omarchy to discover Physical...'
+deadline=$((SECONDS + 15))
+discovered=false
+while ((SECONDS < deadline)); do
+  if plugins=$(OMARCHY_SHELL_IPC_TIMEOUT=0.5s omarchy-shell shell listPlugins 2>/dev/null) &&
+     jq -e 'type == "array" and any(.[]; .id == "b.physical")' >/dev/null 2>&1 <<< "$plugins"; then
+    discovered=true
+    break
+  fi
+  sleep 0.1
+done
+if ! $discovered; then
+  echo "Physical files are installed at $target_dir, but Omarchy did not discover the plugin within 15 seconds. Check the running shell and rerun ./install --prebuilt." >&2
+  exit 1
+fi
+omarchy plugin enable b.physical
 echo "Installed Physical. Open it from the white ball icon or: omarchy-shell shell toggle b.physical"

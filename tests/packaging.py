@@ -36,8 +36,37 @@ if [ "$1" = plugin ] && [ "$2" = validate ]; then
   exec /usr/bin/omarchy-plugin-validate "$3"
 fi
 printf '%s\\n' "$*" >> "$PHYSICAL_COMMAND_LOG"
+if [ "$1" = restart ] && [ "$2" = shell ]; then
+  rm -f "$PHYSICAL_COMMAND_LOG.ready"
+  echo 0 > "$PHYSICAL_COMMAND_LOG.polls"
+elif [ "$1" = plugin ] && [ "$2" = enable ]; then
+  if [ ! -f "$PHYSICAL_COMMAND_LOG.ready" ]; then
+    echo "plugin is not known yet" >&2
+    exit 1
+  fi
+fi
 ''')
-    (commands / 'omarchy-shell').write_text('#!/bin/sh\nprintf \'%s\\n\' "$*" >> "$PHYSICAL_COMMAND_LOG"\n')
+    (commands / 'omarchy-shell').write_text('''#!/bin/sh
+printf '%s\\n' "$*" >> "$PHYSICAL_COMMAND_LOG"
+if [ "$1" = shell ] && [ "$2" = listPlugins ]; then
+  polls=$(cat "$PHYSICAL_COMMAND_LOG.polls")
+  polls=$((polls + 1))
+  echo "$polls" > "$PHYSICAL_COMMAND_LOG.polls"
+  if [ "${PHYSICAL_TEST_DISCOVERY:-}" = missing ]; then
+    echo '[]'
+  elif [ "$polls" -eq 1 ]; then
+    exit 1
+  elif [ "$polls" -eq 2 ]; then
+    echo 'Not ready to accept queries yet'
+  elif [ "$polls" -eq 3 ]; then
+    echo '[{"id":"other.plugin"}]'
+  else
+    test -f "$XDG_CONFIG_HOME/omarchy/plugins/b.physical/manifest.json" || exit 1
+    touch "$PHYSICAL_COMMAND_LOG.ready"
+    echo '[{"id":"b.physical","enabled":false}]'
+  fi
+fi
+''')
     for tool in ['omarchy', 'omarchy-shell']:
         (commands / tool).chmod(0o755)
     env = dict(os.environ, PATH=str(commands) + ':' + os.environ['PATH'], XDG_CONFIG_HOME=str(root / 'config'),
@@ -50,6 +79,20 @@ printf '%s\\n' "$*" >> "$PHYSICAL_COMMAND_LOG"
     assert (installed / 'native/qmldir').read_text() == 'plugin physicalrenderer ' + str(installed / 'native') + '\n'
     assert 'compiler called' not in log.read_text(), 'Prebuilt mode invoked a compiler'
     assert 'restart shell' in log.read_text(), 'New native module would not reload'
+    sequence = log.read_text().splitlines()
+    assert sequence.index('restart shell') < sequence.index('shell listPlugins') < sequence.index('plugin enable b.physical')
+    assert int(pathlib.Path(str(log) + '.polls').read_text()) >= 4, 'Discovery was not awaited'
+    # Reproduce removing a copy-installed plugin, then installing it again.
+    shutil.rmtree(installed)
+    subprocess.run([str(plugin / 'install'), '--prebuilt'], cwd=plugin, env=env, check=True)
+    assert (installed / 'manifest.json').is_file()
+    # A scan that never registers Physical must fail without attempting enable.
+    before_timeout = len(log.read_text().splitlines())
+    unavailable = subprocess.run([str(plugin / 'install'), '--prebuilt'], cwd=plugin,
+                                 env=dict(env, PHYSICAL_TEST_DISCOVERY='missing'),
+                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=25)
+    assert unavailable.returncode and 'did not discover the plugin within 15 seconds' in unavailable.stdout, unavailable.stdout
+    assert 'plugin enable b.physical' not in log.read_text().splitlines()[before_timeout:]
     standalone = bundles['standalone']
     prefix = pathlib.Path(env['PHYSICAL_PREFIX'])
     progress = prefix / 'share/physical/progress.json'
@@ -59,7 +102,11 @@ printf '%s\\n' "$*" >> "$PHYSICAL_COMMAND_LOG"
     assert (prefix / 'bin/physical').is_file()
     desktop = prefix / 'share/applications/io.github.brontosaurusrex.Physical.desktop'
     assert 'Exec="' + str(prefix / 'bin/physical') + '"' in desktop.read_text(), desktop.read_text()
-    subprocess.run([str(prefix / 'bin/physical'), '--help'], env=env, check=True, stdout=subprocess.DEVNULL)
+    # QApplication initializes its platform even for --help. Keep this check
+    # independent of desktop socket access, like the standalone test below.
+    subprocess.run([str(prefix / 'bin/physical'), '--help'],
+                   env=dict(env, QT_QPA_PLATFORM='offscreen', QT_QPA_PLATFORMTHEME=''),
+                   check=True, stdout=subprocess.DEVNULL)
     runtime_env = dict(env, PHYSICAL_STANDALONE_BINARY=str(prefix / 'bin/physical'), PHYSICAL_STANDALONE_DATA=str(prefix / 'share/physical-app'))
     # Restore real PATH: Qt and the engine need ordinary runtime helpers, and
     # the separate prebuilt test above has already checked compiler isolation.
@@ -74,4 +121,4 @@ printf '%s\\n' "$*" >> "$PHYSICAL_COMMAND_LOG"
         binary.write(b'corruption')
     rejected = subprocess.run([str(standalone / 'install')], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     assert rejected.returncode and not (prefix / 'bin/physical').exists(), 'Damaged bundle was installed'
-print('PASS: two archives, checksums, portable module paths, compiler-free plugin install, standalone install/launch/removal, retained progress and corruption rejection')
+print('PASS: two archives, checksums, portable module paths, compiler-free plugin install/reinstall, delayed discovery and timeout, standalone install/launch/removal, retained progress and corruption rejection')
