@@ -1,5 +1,6 @@
 #include <QQuickPaintedItem>
 #include <QQuickWindow>
+#include <QScreen>
 #include <QQmlExtensionPlugin>
 #include <QPainter>
 #include <QPainterPath>
@@ -234,6 +235,7 @@ class GameRenderer : public QQuickPaintedItem {
     Q_PROPERTY(int paintedFrames READ paintedFrames NOTIFY paintedFramesChanged)
     Q_PROPERTY(QString renderError READ renderError NOTIFY renderErrorChanged)
     Q_PROPERTY(QString fontFamily READ fontFamily WRITE setFontFamily NOTIFY fontFamilyChanged)
+    Q_PROPERTY(bool frameClockRunning READ frameClockRunning WRITE setFrameClockRunning NOTIFY frameClockRunningChanged)
     struct Scene { QPicture back, bricks, front; qreal width=1800, height=900; quint64 brickRevision=0; bool gpu=false; QVector<Vertex> slow,fast,bolts; };
     struct Style {
         QColor fill=Qt::black, stroke=Qt::black;
@@ -265,6 +267,10 @@ class GameRenderer : public QQuickPaintedItem {
     QImage brickImage;
     QSize brickSize;
     std::atomic<int> count{0};
+    std::atomic<quint64> clockEpoch{0};
+    QElapsedTimer frameClock;
+    QMetaObject::Connection clockConnection;
+
     QString error, family="monospace";
     qreal gw=1800, gh=900;
 
@@ -470,6 +476,26 @@ class GameRenderer : public QQuickPaintedItem {
     }
 public:
     GameRenderer(QQuickItem *parent=nullptr):QQuickPaintedItem(parent) {
+        frameClock.start();
+        connect(this,&QQuickItem::windowChanged,this,[this](QQuickWindow *view) {
+            disconnect(clockConnection);
+            clockEpoch.fetch_add(2);
+            if(!view)return;
+            // This window's preparation point gives the engine a full render
+            // interval to return its next scene, without a shared animation timer.
+            clockConnection=connect(view,&QQuickWindow::afterAnimating,this,
+                [this,view,last=qint64(0),seen=quint64(0)]() mutable {
+                    const quint64 epoch=clockEpoch.load();
+                    if(!(epoch&1)) { last=0; seen=epoch; return; }
+                    if(epoch!=seen) { last=0; seen=epoch; }
+                    const qint64 now=frameClock.nsecsElapsed();
+                    const qreal refresh=view->screen() ? view->screen()->refreshRate() : 60.;
+                    const qreal elapsed=last ? (now-last)/1e9 : 1./qMax(1.,refresh);
+                    last=now;
+                    if(clockEpoch.load()==epoch) emit frameTick(elapsed);
+                },Qt::DirectConnection);
+        });
+
         setAntialiasing(true); setRenderTarget(QQuickPaintedItem::FramebufferObject); setOpaquePainting(true); setClip(true);
         slowLayer=new DebrisLayer(this); slowLayer->setZ(1);
         brickLayer=new PictureLayer(this); brickLayer->setZ(2);
@@ -483,6 +509,13 @@ public:
         // Raster text and rounded moving objects with smooth coverage; particle
         // geometry remains in separate GPU batches beneath this texture.
         frontLayer->setRenderTarget(QQuickPaintedItem::Image);
+    }
+    bool frameClockRunning()const{return clockEpoch.load()&1;}
+    void setFrameClockRunning(bool active) {
+        if(active==frameClockRunning())return;
+        // A new epoch discards the idle interval and any previous window clock.
+        clockEpoch.fetch_add(1); emit frameClockRunningChanged();
+        if(active)update();
     }
     qreal gameWidth()const{return gw;} qreal gameHeight()const{return gh;}
     int paintedFrames()const{return count.load();}
@@ -590,6 +623,7 @@ protected:
         }
     }
 signals:
+    void frameTick(qreal seconds); void frameClockRunningChanged();
     void geometryChanged(); void paintedFramesChanged(); void renderErrorChanged(); void fontFamilyChanged();
 };
 

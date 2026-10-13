@@ -57,11 +57,16 @@ unused contours are discarded on both sides. Returning particles resend their
 definitions, including after replay or adaptive rendering. This preserves the
 particles, drawing order and physics while reducing packet and allocation work.
 
-Qt's display clock requests frames, with at most two requests outstanding.
-Each animated request carries Qt's measured frame duration; elapsed time from
+The game window's `QQuickWindow::afterAnimating` preparation signal requests
+frames, with at most two requests outstanding. This gives the separate engine
+time to prepare the next scene and avoids depending on Quickshell's shared
+`FrameAnimation` clock, which Qt can drive with timers in multi-window setups.
+Each animated request carries the measured window-frame duration; elapsed time from
 skipped requests accumulates into the next one. Physics and render interpolation
 use that duration rather than uneven pipe-arrival times in the Go process.
 Pause, menu and hidden transitions discard unsent animation time.
+Window changes and resumes reset the clock to the current screen's refresh
+period, excluding time spent idle. It does not change the 240 Hz physics steps.
 Hidden windows stop requesting frames. A faster GPU can improve drawing, but
 CPU work, packet processing, driver overhead and display refresh also limit FPS.
 
@@ -83,8 +88,10 @@ Qt applies monitor scaling for high-DPI displays. Larger resolutions require
 more pixels and larger textures, so 4K/8K layout support does not guarantee the
 same FPS as 1080p.
 
-Qt references: [scene graph rendering](https://doc.qt.io/qt-6/qtquick-visualcanvas-scenegraph-renderer.html)
-and [graphics backends](https://doc.qt.io/qt-6/qtquick-visualcanvas-adaptations.html).
+Qt references: [scene graph rendering](https://doc.qt.io/qt-6/qtquick-visualcanvas-scenegraph-renderer.html),
+[graphics backends](https://doc.qt.io/qt-6/qtquick-visualcanvas-adaptations.html),
+[animation clocks](https://doc.qt.io/qt-6/qtquick-visualcanvas-scenegraph.html)
+and [window frame preparation](https://doc.qt.io/qt-6/qquickwindow.html#afterAnimating).
 
 ## Build and runtime
 

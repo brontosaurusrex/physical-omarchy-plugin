@@ -168,8 +168,7 @@ Item {
         // Advance by the display clock, not by when the separate process reads
         // its pipe. Preserve elapsed time if our bounded queue skips a request.
         if (frameDelta !== undefined) {
-            // FrameAnimation starts with zero elapsed time. Wait for its first
-            // timed frame instead of catching up time spent on an idle screen.
+            // Empty clock updates must not catch up time spent on idle screens.
             if (!(frameDelta > 0)) return;
             pendingFrameTime += frameDelta;
         }
@@ -201,7 +200,6 @@ Item {
         parent: root.surface
         anchors.fill: parent
         Shortcut { sequence: "Escape"; context: Qt.WindowShortcut; enabled: root.opened; autoRepeat: false; onActivated: root.handleEscape(); }
-        FrameAnimation { running: root.animating; onTriggered: root.tick(frameTime); }
         Item {
             id: playArea
             anchors.fill: parent
@@ -214,7 +212,7 @@ Item {
                 focus: true
                 onWidthChanged: pointerLock.release()
                 onHeightChanged: pointerLock.release()
-                GameCanvas { id: canvas; objectName: "physicalCanvas"; anchors.fill: parent; theme: root.theme; surroundColor: root.backdropColor; fontFamily: gameFont.status === FontLoader.Ready ? gameFont.name : Style.resolvedFontFamily; }
+                GameCanvas { id: canvas; objectName: "physicalCanvas"; frameClockRunning: root.animating; onFrameTick: function(delta) { root.tick(delta); } anchors.fill: parent; theme: root.theme; surroundColor: root.backdropColor; fontFamily: gameFont.status === FontLoader.Ready ? gameFont.name : Style.resolvedFontFamily; }
                 Native.PointerLock {
                     id: pointerLock
                     anchors.fill: parent

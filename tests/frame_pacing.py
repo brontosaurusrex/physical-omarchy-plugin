@@ -42,6 +42,20 @@ ShellRoot {
     property double worstMotionError: 0
     property double pausedX: 0
     Port.Physical { id: game }
+    // The installed plugin shares Quickshell with a visible bar. Exercise the
+    // clock with another real window, rather than only a standalone game window.
+    Loader {
+        active: Quickshell.env("PHYSICAL_TEST_WAYLAND") === "1"
+        sourceComponent: PanelWindow {
+            visible: game.opened
+            anchors { bottom: true; right: true; }
+            implicitWidth: 120; implicitHeight: 20
+            exclusionMode: ExclusionMode.Ignore
+            focusable: false
+            color: "#1a1a2e"
+            Text { anchors.centerIn: parent; text: "Frame-clock test"; color: "white"; font.pixelSize: 10; }
+        }
+    }
     function fail(message) { console.error("PACING FAILED", message); Qt.exit(1); }
     Component.onCompleted: {
         game.open("{}");
