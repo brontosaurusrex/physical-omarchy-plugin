@@ -7,6 +7,12 @@ Item {
     property string fontFamily: "EnvyCodeR Nerd Font Mono"
     // Match the web controls' font glyphs; keep a play glyph for native playback.
     readonly property string symbol: icon === "pause" ? "󰏤" : icon === "play" ? "󰐊" : icon === "fullscreen" ? "" : "⋮"
+    // Visible glyph bounds, including the font's bearings and centered layout.
+    readonly property rect inkBounds: Qt.rect(
+        (glyph.width - glyphMetrics.advanceWidth) / 2 + glyphMetrics.tightBoundingRect.x,
+        glyph.baselineOffset + glyphMetrics.tightBoundingRect.y,
+        glyphMetrics.tightBoundingRect.width, glyphMetrics.tightBoundingRect.height)
+    TextMetrics { id: glyphMetrics; font: glyph.font; text: root.symbol }
     signal clicked()
     width: 28
     height: 28

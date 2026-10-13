@@ -249,13 +249,18 @@ Item {
                 Keys.onPressed: function(event) { root.pressKey(event); event.accepted = true; }
                 Keys.onReleased: function(event) { root.releaseKey(event); event.accepted = true; }
                 Row {
+                    readonly property real gameScale: gameInput.width / canvas.gameWidth
                     anchors.top: parent.top
                     anchors.right: parent.right
-                    anchors.margins: 14
+                    // Match the rendered HUD's x=22 and first baseline y=37,
+                    // accounting for blank space around the button glyphs.
+                    anchors.topMargin: (37 + hudTextMetrics.tightBoundingRect.y) * gameScale - playbackButton.inkBounds.y
+                    anchors.rightMargin: (22 + hudTextMetrics.tightBoundingRect.x) * gameScale - (menuButton.width - menuButton.inkBounds.x - menuButton.inkBounds.width)
                     spacing: 8
-                    HudButton { objectName: "playback-toggle"; icon: root.state.replay ? (root.state.replayDirection === 0 ? "play" : "pause") : (root.state.paused || root.state.ready ? "play" : "pause"); foreground: root.hudColor; fontFamily: canvas.fontFamily; onClicked: { pointerLock.release(); root.togglePlayback(); } }
+                    TextMetrics { id: hudTextMetrics; font.family: canvas.fontFamily; font.pixelSize: 18; font.bold: true; text: "Lives:" }
+                    HudButton { id: playbackButton; objectName: "playback-toggle"; icon: root.state.replay ? (root.state.replayDirection === 0 ? "play" : "pause") : (root.state.paused || root.state.ready ? "play" : "pause"); foreground: root.hudColor; fontFamily: canvas.fontFamily; onClicked: { pointerLock.release(); root.togglePlayback(); } }
                     HudButton { icon: "fullscreen"; foreground: root.hudColor; fontFamily: canvas.fontFamily; onClicked: root.toggleFullscreen(); }
-                    HudButton { icon: "menu"; foreground: root.hudColor; fontFamily: canvas.fontFamily; onClicked: root.toggleMenu(); }
+                    HudButton { id: menuButton; icon: "menu"; foreground: root.hudColor; fontFamily: canvas.fontFamily; onClicked: root.toggleMenu(); }
                 }
             }
             Loader {
