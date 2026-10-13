@@ -18,6 +18,7 @@ Item {
     // Replies can arrive after the next display callback. A two-frame bound
     // avoids halving the display rate while keeping the request queue short.
     property int ticksPending: 0
+    property real pendingFrameTime: 0
     property bool menuVisible: false
     property bool spaceHeld: false
     property bool fullscreenChord: false
@@ -91,6 +92,7 @@ Item {
     // The original engine keeps debris moving behind the completion table.
     // Use the display clock until it disappears, then return to idle polling.
     readonly property bool animating: opened && engineReady && !menuVisible && ((!state.paused && !state.ready && !state.gameOver && (!state.complete || state.debrisPieces > 0) && (!state.editor || state.live)) || (state.replay && state.replayDirection !== 0))
+    onAnimatingChanged: pendingFrameTime = 0
 
     function send(data) {
         if (!engineReady || !engine.running) return;
@@ -162,11 +164,21 @@ Item {
             if (first) { send({ action: "visibility", down: opened }); }
         } catch (error) { errorText = "Native engine: " + String(error); }
     }
-    function tick() {
+    function tick(frameDelta) {
+        // Advance by the display clock, not by when the separate process reads
+        // its pipe. Preserve elapsed time if our bounded queue skips a request.
+        if (frameDelta !== undefined) {
+            // FrameAnimation starts with zero elapsed time. Wait for its first
+            // timed frame instead of catching up time spent on an idle screen.
+            if (!(frameDelta > 0)) return;
+            pendingFrameTime += frameDelta;
+        }
         if (ticksPending >= 2 || !engineReady || !opened) return;
         if (pointerDirty) { pointerDirty = false; send({ action: "pointer", x: pointerX, y: pointerY }); }
         ticksPending++;
-        send({ action: "tick" });
+        var elapsed = pendingFrameTime;
+        pendingFrameTime = 0;
+        send(elapsed > 0 ? { action: "tick", dt: elapsed } : { action: "tick" });
     }
 
     FontLoader { id: gameFont; source: "fonts/EnvyCodeRNerdFontMono-Bold.ttf"; }
@@ -189,7 +201,7 @@ Item {
         parent: root.surface
         anchors.fill: parent
         Shortcut { sequence: "Escape"; context: Qt.WindowShortcut; enabled: root.opened; autoRepeat: false; onActivated: root.handleEscape(); }
-        FrameAnimation { running: root.animating; onTriggered: root.tick(); }
+        FrameAnimation { running: root.animating; onTriggered: root.tick(frameTime); }
         Item {
             id: playArea
             anchors.fill: parent
@@ -243,9 +255,9 @@ Item {
                     anchors.right: parent.right
                     anchors.margins: 14
                     spacing: 8
-                    HudButton { objectName: "playback-toggle"; icon: root.state.replay ? (root.state.replayDirection === 0 ? "play" : "pause") : (root.state.paused || root.state.ready ? "play" : "pause"); foreground: root.hudColor; onClicked: { pointerLock.release(); root.togglePlayback(); } }
-                    HudButton { icon: "fullscreen"; foreground: root.hudColor; onClicked: root.toggleFullscreen(); }
-                    HudButton { icon: "menu"; foreground: root.hudColor; onClicked: root.toggleMenu(); }
+                    HudButton { objectName: "playback-toggle"; icon: root.state.replay ? (root.state.replayDirection === 0 ? "play" : "pause") : (root.state.paused || root.state.ready ? "play" : "pause"); foreground: root.hudColor; fontFamily: canvas.fontFamily; onClicked: { pointerLock.release(); root.togglePlayback(); } }
+                    HudButton { icon: "fullscreen"; foreground: root.hudColor; fontFamily: canvas.fontFamily; onClicked: root.toggleFullscreen(); }
+                    HudButton { icon: "menu"; foreground: root.hudColor; fontFamily: canvas.fontFamily; onClicked: root.toggleMenu(); }
                 }
             }
             Loader {

@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -47,6 +48,48 @@ var lastStorageError error
 var clockStart = time.Now()
 var clockMS float64
 var sentRevisions = map[int]int{}
+
+type debrisShape struct {
+	Radius    float64   `json:"radius"`
+	Circle    bool      `json:"circle"`
+	Roundness float64   `json:"roundness"`
+	Points    []float64 `json:"points"`
+	seen      uint64
+}
+type debrisBatch struct {
+	Instances []float64 `json:"instances"`
+	Colors    []string  `json:"colors"`
+}
+
+var debrisFrame uint64
+var debrisShapes = map[uint32]debrisShape{}
+var debrisUpdates = map[uint32]debrisShape{}
+
+// Preserve the original drawing order and full-precision positions, but send
+// immutable fragment contours once and typed movement arrays instead of many
+// individually allocated drawing operations. No simulation data changes.
+func batchDebris(n *node, args []any) {
+	id := args[0].(uint32)
+	points := args[9].([]float64)
+	shape, found := debrisShapes[id]
+	if !found || shape.Radius != args[6].(float64) || shape.Circle != args[7].(bool) ||
+		shape.Roundness != args[8].(float64) || !slices.Equal(shape.Points, points) {
+		shape = debrisShape{Radius: args[6].(float64), Circle: args[7].(bool), Roundness: args[8].(float64), Points: slices.Clone(points)}
+		debrisUpdates[id] = shape
+	}
+	shape.seen = debrisFrame
+	debrisShapes[id] = shape
+	var batch *debrisBatch
+	if len(n.ops) > 0 && n.ops[len(n.ops)-1][0] == "debris-batch" {
+		batch = n.ops[len(n.ops)-1][1].(*debrisBatch)
+	} else {
+		batch = &debrisBatch{Instances: make([]float64, 0, len(debrisShapes)*5), Colors: make([]string, 0, len(debrisShapes))}
+		n.ops = append(n.ops, []any{"debris-batch", batch})
+	}
+	batch.Instances = append(batch.Instances, float64(id), args[1].(float64), args[2].(float64), args[3].(float64), args[4].(float64))
+	batch.Colors = append(batch.Colors, args[5].(string))
+	n.revision++
+}
 
 func object(kind string) Value { return Value{&node{kind: kind, props: map[string]Value{}}} }
 func Undefined() Value         { return Value{} }
@@ -222,12 +265,17 @@ func (v Value) Call(method string, args ...any) Value {
 	}
 	switch n.kind {
 	case "context":
+		if method == "debris" && n.id == 0 {
+			batchDebris(n, args)
+			return Undefined()
+		}
 		if method == "measureText" {
 			size := 16.0
 			fmt.Sscanf(n.props["font"].String(), "%fpx", &size)
 			return ValueOf(map[string]any{"width": float64(len([]rune(fmt.Sprint(args[0])))) * size * 0.6})
 		}
-		op := []any{method}
+		op := make([]any, 1, len(args)+1)
+		op[0] = method
 		for _, a := range args {
 			op = append(op, raw(a))
 		}
@@ -312,6 +360,11 @@ func (v Value) Call(method string, args ...any) Value {
 func CopyBytesToJS(v Value, data []byte) int { return len(data) }
 
 func Initialize(resourceFS fs.FS, path string) Value {
+	canvases = nil
+	sentRevisions = map[int]int{}
+	debrisShapes = map[uint32]debrisShape{}
+	debrisUpdates = map[uint32]debrisShape{}
+	debrisFrame = 0
 	resources = resourceFS
 	statePath = path
 	if data, err := os.ReadFile(path); err == nil {
@@ -327,11 +380,20 @@ func Initialize(resourceFS fs.FS, path string) Value {
 func SetClock(ms float64) { clockMS = ms }
 func Now() float64        { return float64(time.Since(clockStart).Microseconds()) / 1000 }
 func BeginFrame() {
+	debrisFrame++
+	clear(debrisUpdates)
 	if len(canvases) > 0 {
 		canvases[0].ops = nil
 	}
 }
 func Frame() ([][]any, map[int][][]any) {
+	// Bound both sides of the outline cache to the fragments actually sent.
+	// A replay rewind or previously skipped fragment resends its outline.
+	for id, shape := range debrisShapes {
+		if shape.seen != debrisFrame {
+			delete(debrisShapes, id)
+		}
+	}
 	caches := map[int][][]any{}
 	for _, c := range canvases[1:] {
 		if sentRevisions[c.id] != c.revision {
@@ -341,6 +403,7 @@ func Frame() ([][]any, map[int][][]any) {
 	}
 	return canvases[0].ops, caches
 }
+func DebrisShapes() map[uint32]debrisShape { return debrisUpdates }
 func StorageError() string {
 	if lastStorageError != nil {
 		return lastStorageError.Error()

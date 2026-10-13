@@ -121,5 +121,33 @@ int main(int argc,char **argv) {
         if(std::abs(a.red()-b.red())>3 || std::abs(a.green()-b.green())>3 || std::abs(a.blue()-b.blue())>3 || std::abs(a.alpha()-b.alpha())>3) ++difference;
     }
     require(difference<10,"brick batch changed rounded corners, tilt or game colors");
-    std::puts("PASS: native outline triangulation, game colors, and debris depth ordering");
+    // The new transport must produce identical raster output, including moving
+    // cached contours, a shape change and particles crossing the brick layer.
+    GameRenderer oldParticles,newParticles;
+    oldParticles.setWidth(80); oldParticles.setHeight(80);
+    newParticles.setWidth(80); newParticles.setHeight(80);
+    auto raster=[&](GameRenderer &renderer,const QJsonObject &packet) {
+        renderer.acceptLine(QString::fromUtf8(QJsonDocument(packet).toJson(QJsonDocument::Compact)));
+        require(renderer.renderError().isEmpty(),"particle packet failed");
+        QImage result(80,80,QImage::Format_ARGB32_Premultiplied); result.fill(Qt::transparent);
+        QPainter painter(&result); renderer.paint(&painter); painter.end(); return result;
+    };
+    const QJsonArray points{-8,-4,3,-7,9,2,-3,8};
+    for(int frame=0;frame<4;++frame) {
+        const qreal x=30.25+frame*.6,radius=frame>=2 ? 8 : 10;
+        QJsonObject reference=QJsonDocument::fromJson(packet.toUtf8()).object();
+        reference["ops"]=QJsonArray{QJsonArray{"set","fillStyle","#0000ff"},QJsonArray{"fillRect",0,0,80,80},
+            QJsonArray{"debris",1,x,40,1,0,"rgb(255,0,0)",radius,true,0,QJsonArray{}},QJsonArray{"cache",1},
+            QJsonArray{"debris",2,50,40,.8,.6,"#ff8800",10,false,.4,points}};
+        QJsonObject batched=reference;
+        batched["ops"]=QJsonArray{QJsonArray{"set","fillStyle","#0000ff"},QJsonArray{"fillRect",0,0,80,80},
+            QJsonArray{"debris-batch",QJsonObject{{"instances",QJsonArray{1,x,40,1,0}},{"colors",QJsonArray{"rgb(255,0,0)"}}}},
+            QJsonArray{"cache",1},QJsonArray{"debris-batch",QJsonObject{{"instances",QJsonArray{2,50,40,.8,.6}},{"colors",QJsonArray{"#ff8800"}}}}};
+        QJsonObject shapes;
+        if(frame==0 || frame==2) shapes["1"]=QJsonObject{{"radius",radius},{"circle",true},{"roundness",0},{"points",QJsonArray{}}};
+        if(frame==0) shapes["2"]=QJsonObject{{"radius",10},{"circle",false},{"roundness",.4},{"points",points}};
+        batched["debrisShapes"]=shapes;
+        require(raster(oldParticles,reference)==raster(newParticles,batched),"particle batching changed pixels or depth");
+    }
+    std::puts("PASS: native outline triangulation, game colors, particle transport pixel equivalence and debris depth ordering");
 }

@@ -50,7 +50,18 @@ byte-for-byte unchanged. Static completion text can stay cached while separate
 GPU layers animate debris; changes to text, colors or other foreground content
 invalidate it, and resizing still repaints at the new display size.
 
+Particle contours travel to Qt only when first used or changed. Each depth layer
+then sends a compact batch of full-precision positions, rotations and colors.
+The renderer reuses the same triangulated outlines and caches resolved colors;
+unused contours are discarded on both sides. Returning particles resend their
+definitions, including after replay or adaptive rendering. This preserves the
+particles, drawing order and physics while reducing packet and allocation work.
+
 Qt's display clock requests frames, with at most two requests outstanding.
+Each animated request carries Qt's measured frame duration; elapsed time from
+skipped requests accumulates into the next one. Physics and render interpolation
+use that duration rather than uneven pipe-arrival times in the Go process.
+Pause, menu and hidden transitions discard unsent animation time.
 Hidden windows stop requesting frames. A faster GPU can improve drawing, but
 CPU work, packet processing, driver overhead and display refresh also limit FPS.
 
@@ -93,8 +104,12 @@ only writes the module path; it neither compiles nor downloads anything. The
 standalone app uses a normal relative Qt module definition. Bundles require
 compatible Qt and system libraries; see [PACKAGING.md](PACKAGING.md).
 
-The shell controls follow Omarchy's theme. The playfield keeps the game's
-original level palettes, with the web version's dark blue surround (`#1a1a2e`)
+The shell controls follow Omarchy's theme. The top-right game controls use the
+bundled Envy Code R Nerd Font Mono Bold for pause/play and fullscreen, with the
+web version's exact pause/fullscreen glyphs and Unicode vertical ellipsis
+for the menu (with Qt font fallback where needed). Their tint follows the level
+palette. The playfield keeps the game's original level palettes, with the web
+version's dark blue surround (`#1a1a2e`)
 and 8-pixel rounded corners in windowed and fullscreen modes. Four tiny cached
 corner images use supersampled circular paths for smooth edges and repaint only
 when their size or color changes. The playfield retains its 2:1 ratio and leaves
@@ -126,11 +141,15 @@ bit-identical output.
 `tests/level_complete.py` embeds a tiny level in a temporary engine build and
 checks actual level completion, smooth debris animation, cached text and corners
 and the return to idle when debris disappears. It leaves game levels untouched.
+`tests/frame_pacing.py` checks constant-speed ball rendering in a temporary level
+while deliberately delaying the test engine, including skipped requests and
+pause/resume. Neither delays nor test levels are installed with the game.
 `tests/performance.py` runs real gameplay with private progress, tracks painted
 frames and engine replies, and uses an external heartbeat watchdog. Deliberate
 UI/engine freeze injection verifies the detector; longer runs can rotate dense
 levels 23, 26 and 27. Tests cannot guarantee that every driver or future run is
-crash-free. See [the current audit](docs/audit-2026-10-12.md) for measured results.
+crash-free. See the [gameplay audit](docs/audit-2026-10-12.md) and
+[frame timing and particle measurements](docs/audit-2026-10-13.md).
 
 `BenchmarkNativeDenseFrames` profiles simulation, drawing-packet preparation and
 JSON encoding without a window or audio device. Its timings are engine CPU

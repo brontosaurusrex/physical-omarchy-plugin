@@ -15,6 +15,7 @@
 #include <QMutex>
 #include <QElapsedTimer>
 #include <QMutexLocker>
+#include <QSet>
 #include <atomic>
 #include <cstring>
 #include <cmath>
@@ -246,6 +247,8 @@ class GameRenderer : public QQuickPaintedItem {
     };
     struct Outline { QPainterPath path; QVector<QPointF> triangles; QJsonArray points; qreal radius=0, roundness=0; bool circle=false; };
     QHash<quint32,Outline> outlines;
+    QSet<quint32> frameOutlines;
+    QHash<QString,QColor> debrisColors;
     DebrisLayer *slowLayer=nullptr,*fastLayer=nullptr,*boltLayer=nullptr;
     PictureLayer *brickLayer=nullptr,*frontLayer=nullptr;
     DebrisLayer *brickGpuLayer=nullptr;
@@ -271,6 +274,52 @@ class GameRenderer : public QQuickPaintedItem {
             if (parts.size()>=3) return QColor::fromRgbF(parts[0].toDouble()/255., parts[1].toDouble()/255., parts[2].toDouble()/255., parts.size()==4 ? parts[3].toDouble() : 1.);
         }
         return QColor(text);
+    }
+    void ensureOutline(quint32 id,qreal radius,bool circle,qreal roundness,const QJsonArray &points) {
+        if(!outlines.contains(id) || outlines[id].radius!=radius || outlines[id].roundness!=roundness || outlines[id].circle!=circle || outlines[id].points!=points) {
+            Outline outline; outline.points=points; outline.radius=radius; outline.roundness=roundness; outline.circle=circle;
+            auto &shape=outline.path; shape.setFillRule(Qt::WindingFill);
+            const int count=points.size()/2;
+            if(circle) shape.addEllipse(QPointF(0,0),radius,radius);
+            else if(count>=3 && roundness<=0.001) {
+                shape.moveTo(points[0].toDouble(),points[1].toDouble());
+                for(int i=1;i<count;++i) shape.lineTo(points[i*2].toDouble(),points[i*2+1].toDouble());
+                shape.closeSubpath();
+            } else if(count>=3) {
+                const qreal corner=0.08+qBound(0.,roundness,1.)*0.34;
+                QPointF last(points[(count-1)*2].toDouble(),points[(count-1)*2+1].toDouble());
+                QPointF first(points[0].toDouble(),points[1].toDouble());
+                shape.moveTo(last+(first-last)*(1-corner));
+                for(int i=0;i<count;++i) {
+                    const int next=(i+1)%count;
+                    QPointF current(points[i*2].toDouble(),points[i*2+1].toDouble());
+                    QPointF following(points[next*2].toDouble(),points[next*2+1].toDouble());
+                    shape.quadTo(current,current+(following-current)*corner);
+                }
+                shape.closeSubpath();
+            }
+            outline.triangles=triangulate(shape);
+            outlines[id]=outline;
+        }
+    }
+    void drawDebris(QPainter &painter,QVector<Vertex> *vertices,quint32 id,qreal x,qreal y,qreal c,qreal s,const QString &text) {
+        frameOutlines.insert(id);
+        const auto outline=outlines.constFind(id);
+        if(outline==outlines.cend()) { error="Missing particle outline: " + QString::number(id); return; }
+        auto fill=debrisColors.constFind(text);
+        if(fill==debrisColors.cend()) {
+            if(debrisColors.size()>4096) debrisColors.clear();
+            fill=debrisColors.insert(text,color(text));
+        }
+        if(vertices) {
+            const auto red=static_cast<unsigned char>(fill->red()),green=static_cast<unsigned char>(fill->green()),blue=static_cast<unsigned char>(fill->blue());
+            const auto &triangles=outline->triangles;
+            vertices->reserve(vertices->size()+triangles.size());
+            for(const auto &point:triangles) vertices->append(Vertex{float(x+point.x()*c-point.y()*s),float(y+point.x()*s+point.y()*c),red,green,blue,255});
+        } else {
+            painter.save(); painter.setTransform(QTransform(c,s,-s,c,x,y));
+            painter.fillPath(outline->path,*fill); painter.restore();
+        }
     }
     QPicture compile(const QJsonArray &ops,QVector<Vertex> *vertices=nullptr,QVector<Vertex> *bolts=nullptr) {
         QPicture picture;
@@ -370,42 +419,17 @@ class GameRenderer : public QQuickPaintedItem {
             } else if (name=="debris") {
                 const quint32 id=quint32(n(1)); const qreal radius=n(7),roundness=n(9);
                 const bool circle=op[8].toBool(); const auto points=op[10].toArray();
-                if(outlines.size()>2000) outlines.clear();
-                if(!outlines.contains(id) || outlines[id].radius!=radius || outlines[id].roundness!=roundness || outlines[id].circle!=circle || outlines[id].points!=points) {
-                    Outline outline; outline.points=points; outline.radius=radius; outline.roundness=roundness; outline.circle=circle;
-                    auto &shape=outline.path; shape.setFillRule(Qt::WindingFill);
-                    const int count=points.size()/2;
-                    if(circle) shape.addEllipse(QPointF(0,0),radius,radius);
-                    else if(count>=3 && roundness<=0.001) {
-                        shape.moveTo(points[0].toDouble(),points[1].toDouble());
-                        for(int i=1;i<count;++i) shape.lineTo(points[i*2].toDouble(),points[i*2+1].toDouble());
-                        shape.closeSubpath();
-                    } else if(count>=3) {
-                        const qreal corner=0.08+qBound(0.,roundness,1.)*0.34;
-                        QPointF last(points[(count-1)*2].toDouble(),points[(count-1)*2+1].toDouble());
-                        QPointF first(points[0].toDouble(),points[1].toDouble());
-                        shape.moveTo(last+(first-last)*(1-corner));
-                        for(int i=0;i<count;++i) {
-                            const int next=(i+1)%count;
-                            QPointF current(points[i*2].toDouble(),points[i*2+1].toDouble());
-                            QPointF following(points[next*2].toDouble(),points[next*2+1].toDouble());
-                            shape.quadTo(current,current+(following-current)*corner);
-                        }
-                        shape.closeSubpath();
-                    }
-                    outline.triangles=triangulate(shape);
-                    outlines[id]=outline;
-                }
-                const QColor fill=color(op[6].toString());
-                if(vertices) {
-                    const qreal x=n(2),y=n(3),c=n(4),s=n(5);
-                    const auto red=static_cast<unsigned char>(fill.red()),green=static_cast<unsigned char>(fill.green()),blue=static_cast<unsigned char>(fill.blue());
-                    const auto &triangles=outlines[id].triangles;
-                    vertices->reserve(vertices->size()+triangles.size());
-                    for(const auto &point:triangles) vertices->append(Vertex{float(x+point.x()*c-point.y()*s),float(y+point.x()*s+point.y()*c),red,green,blue,255});
-                } else {
-                    painter.save(); painter.setTransform(QTransform(n(4),n(5),-n(5),n(4),n(2),n(3)));
-                    painter.fillPath(outlines[id].path,fill); painter.restore();
+                ensureOutline(id,radius,circle,roundness,points);
+                drawDebris(painter,vertices,id,n(2),n(3),n(4),n(5),op[6].toString());
+            } else if (name=="debris-batch") {
+                const auto batch=op[1].toObject();
+                const auto instances=batch["instances"].toArray(),colors=batch["colors"].toArray();
+                if(instances.size()!=colors.size()*5) { error="Invalid particle batch"; continue; }
+                for(int i=0;i<colors.size();++i) {
+                    const int base=i*5;
+                    drawDebris(painter,vertices,quint32(instances[base].toDouble()),
+                        instances[base+1].toDouble(),instances[base+2].toDouble(),
+                        instances[base+3].toDouble(),instances[base+4].toDouble(),colors[i].toString());
                 }
             } else if (name=="fill") painter.fillPath(path,style.fill);
             else if (name=="stroke") {
@@ -473,6 +497,13 @@ public:
         if(parse.error!=QJsonParseError::NoError) { error=parse.errorString(); emit renderErrorChanged(); return {}; }
         if(packet["type"].toString()!="frame") return packet.toVariantMap();
         const qreal parseMs=profile ? timer.nsecsElapsed()/1e6 : 0;
+        frameOutlines.clear();
+        const auto shapes=packet["debrisShapes"].toObject();
+        for(auto it=shapes.begin();it!=shapes.end();++it) {
+            const auto shape=it.value().toObject();
+            ensureOutline(it.key().toUInt(),shape["radius"].toDouble(),shape["circle"].toBool(),
+                shape["roundness"].toDouble(),shape["points"].toArray());
+        }
         const auto updates=packet["caches"].toObject();
         const bool gpu=window() && window()->rendererInterface()->graphicsApi()==QSGRendererInterface::OpenGL;
         for(auto it=updates.begin();it!=updates.end();++it) {
@@ -492,6 +523,9 @@ public:
             next->back=compile(before,next->gpu ? &next->slow : nullptr);
             next->bricks=caches.value(cache); next->brickRevision=revisions.value(cache);
             next->front=compile(after,next->gpu ? &next->fast : nullptr,next->gpu ? &next->bolts : nullptr);
+        }
+        for(auto it=outlines.begin();it!=outlines.end();) {
+            if(!frameOutlines.contains(it.key())) it=outlines.erase(it); else ++it;
         }
         activeBrickCache=cache;
         slowLayer->setVisible(next->gpu); brickLayer->setVisible(next->gpu && brickMeshes.value(cache).isEmpty()); brickGpuLayer->setVisible(next->gpu && !brickMeshes.value(cache).isEmpty()); fastLayer->setVisible(next->gpu); boltLayer->setVisible(next->gpu); frontLayer->setVisible(next->gpu);
@@ -517,7 +551,7 @@ public:
             state["qtFrontPaintCount"]=frontLayer->paintCount();
             packet["state"]=state;
         }
-        packet.remove("ops"); packet.remove("caches");
+        packet.remove("ops"); packet.remove("caches"); packet.remove("debrisShapes");
         if(!error.isEmpty()) emit renderErrorChanged();
         update();
         return packet.toVariantMap();
