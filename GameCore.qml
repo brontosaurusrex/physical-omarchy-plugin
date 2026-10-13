@@ -23,10 +23,12 @@ Item {
     property bool fullscreenChord: false
     readonly property bool fullscreen: panel ? panel.fullscreen : false
     readonly property bool mouseLocked: pointerLock.locked
+    readonly property color backdropColor: "#1a1a2e"
+    readonly property real playfieldMargin: 6
     readonly property real gameAspectRatio: canvas.gameWidth / canvas.gameHeight
     function initialWindowSize(screenWidth, screenHeight) {
-        // Reserve the same two-pixel frame on all sides, then fit the playfield.
-        var inset = 4;
+        // Fit the playfield after reserving its blue surround and shell frame.
+        var inset = 2 * (playfieldMargin + 2);
         var maxWidth = Math.min(1280, Math.floor(screenWidth * 0.9));
         var maxHeight = Math.floor(screenHeight * 0.9);
         var contentHeight = Math.max(1, Math.floor(Math.min((maxWidth - inset) / gameAspectRatio, maxHeight - inset)));
@@ -86,7 +88,9 @@ Item {
     property bool windowSetupReady: true
     readonly property string enginePath: Qt.resolvedUrl("bin/physical-engine").toString().replace(/^file:\/\//, "")
     readonly property var theme: ({ background: String(Color.background), foreground: String(Color.foreground), accent: String(Color.accent), urgent: String(Color.urgent), muted: String(Color.muted) })
-    readonly property bool animating: opened && engineReady && !menuVisible && ((!state.paused && !state.ready && !state.gameOver && !state.complete && (!state.editor || state.live)) || (state.replay && state.replayDirection !== 0))
+    // The original engine keeps debris moving behind the completion table.
+    // Use the display clock until it disappears, then return to idle polling.
+    readonly property bool animating: opened && engineReady && !menuVisible && ((!state.paused && !state.ready && !state.gameOver && (!state.complete || state.debrisPieces > 0) && (!state.editor || state.live)) || (state.replay && state.replayDirection !== 0))
 
     function send(data) {
         if (!engineReady || !engine.running) return;
@@ -189,7 +193,7 @@ Item {
         Item {
             id: playArea
             anchors.fill: parent
-            anchors.margins: panel.fullscreen ? 0 : 2
+            anchors.margins: root.playfieldMargin + (panel.fullscreen ? 0 : 2)
             Item {
                 id: gameInput
                 anchors.centerIn: parent
@@ -198,7 +202,7 @@ Item {
                 focus: true
                 onWidthChanged: pointerLock.release()
                 onHeightChanged: pointerLock.release()
-                GameCanvas { id: canvas; objectName: "physicalCanvas"; anchors.fill: parent; theme: root.theme; fontFamily: gameFont.status === FontLoader.Ready ? gameFont.name : Style.resolvedFontFamily; }
+                GameCanvas { id: canvas; objectName: "physicalCanvas"; anchors.fill: parent; theme: root.theme; surroundColor: root.backdropColor; fontFamily: gameFont.status === FontLoader.Ready ? gameFont.name : Style.resolvedFontFamily; }
                 Native.PointerLock {
                     id: pointerLock
                     anchors.fill: parent

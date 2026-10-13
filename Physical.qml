@@ -54,7 +54,7 @@ GameCore {
         id: hostWindow
         visible: false
         title: "Physical"
-        color: root.state.palette ? root.state.palette[0] : Color.background
+        color: root.backdropColor
         implicitWidth: root.defaultWindowWidth
         implicitHeight: root.defaultWindowHeight
         minimumSize: Qt.size(Math.min(640, root.defaultWindowWidth), Math.min(360, root.defaultWindowHeight))

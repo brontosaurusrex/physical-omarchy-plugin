@@ -45,6 +45,11 @@ each cell repeatedly. The cell contents and traversal order match the original
 grid, so this reduces CPU lookup work without changing which brick attracts a
 fragment. Regression checks compare 3,000 queries, including destroyed bricks.
 
+The renderer retains a painted foreground texture when its recorded picture is
+byte-for-byte unchanged. Static completion text can stay cached while separate
+GPU layers animate debris; changes to text, colors or other foreground content
+invalidate it, and resizing still repaints at the new display size.
+
 Qt's display clock requests frames, with at most two requests outstanding.
 Hidden windows stop requesting frames. A faster GPU can improve drawing, but
 CPU work, packet processing, driver overhead and display refresh also limit FPS.
@@ -89,7 +94,13 @@ standalone app uses a normal relative Qt module definition. Bundles require
 compatible Qt and system libraries; see [PACKAGING.md](PACKAGING.md).
 
 The shell controls follow Omarchy's theme. The playfield keeps the game's
-original level palettes. Standalone menus use Qt's desktop palette. Both hosts
+original level palettes, with the web version's dark blue surround (`#1a1a2e`)
+and 8-pixel rounded corners in windowed and fullscreen modes. Four tiny cached
+corner images use supersampled circular paths for smooth edges and repaint only
+when their size or color changes. The playfield retains its 2:1 ratio and leaves
+a margin around it. The display clock continues on the level-complete screen
+while debris is present, then returns to idle polling when the screen is still.
+Standalone menus use Qt's desktop palette. Both hosts
 share `GameCore.qml`, render/audio modules and controls. Plugin and standalone
 progress files are separate from each other and from the web version.
 No browser, web server or WebAssembly runs the game.
@@ -112,6 +123,9 @@ bit-identical output.
 
 `tests/keyboard.py` sends Qt keyboard events through the actual QML window.
 `tests/pointer_lock.py` verifies Wayland capture through the QML mouse handler.
+`tests/level_complete.py` embeds a tiny level in a temporary engine build and
+checks actual level completion, smooth debris animation, cached text and corners
+and the return to idle when debris disappears. It leaves game levels untouched.
 `tests/performance.py` runs real gameplay with private progress, tracks painted
 frames and engine replies, and uses an external heartbeat watchdog. Deliberate
 UI/engine freeze injection verifies the detector; longer runs can rotate dense

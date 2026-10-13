@@ -16,6 +16,7 @@
 #include <QElapsedTimer>
 #include <QMutexLocker>
 #include <atomic>
+#include <cstring>
 #include <cmath>
 #include <memory>
 #include "pointerlock.h"
@@ -71,12 +72,20 @@ class PictureLayer : public QQuickPaintedItem {
     QPicture picture;
     qreal gw=1800,gh=900;
     std::atomic<qint64> paintNs{0};
+    std::atomic<int> paints{0};
     const bool profile=qEnvironmentVariableIsSet("PHYSICAL_RENDER_TIMINGS");
 public:
     qreal paintMs() const { return paintNs.load()/1e6; }
+    int paintCount() const { return paints.load(); }
     PictureLayer(QQuickItem *parent):QQuickPaintedItem(parent) { setAntialiasing(true); setRenderTarget(FramebufferObject); }
-    void setFrame(const QPicture &next,qreal w,qreal h) { picture=next; gw=w; gh=h; update(); }
-    void paint(QPainter *painter) override { QElapsedTimer timer; if(profile) timer.start(); painter->scale(width()/gw,height()/gh); painter->drawPicture(0,0,picture); if(profile) paintNs.store(timer.nsecsElapsed()); }
+    void setFrame(const QPicture &next,qreal w,qreal h) {
+        // Particles live in separate GPU layers. Retain the text texture when
+        // its complete recorded content is identical, especially on results.
+        if(gw==w && gh==h && picture.size()==next.size() &&
+           (!next.size() || std::memcmp(picture.data(),next.data(),next.size())==0)) return;
+        picture=next; gw=w; gh=h; update();
+    }
+    void paint(QPainter *painter) override { QElapsedTimer timer; if(profile) timer.start(); painter->scale(width()/gw,height()/gh); painter->drawPicture(0,0,picture); paints.fetch_add(1); if(profile) paintNs.store(timer.nsecsElapsed()); }
 };
 
 // Quadratic rounded contours match the original canvas corners. Inner fill,
@@ -505,6 +514,7 @@ public:
             state["qtParseMs"]=parseMs; state["qtCacheMs"]=cacheMs;
             state["qtCompileMs"]=timer.nsecsElapsed()/1e6-parseMs-cacheMs;
             state["qtBrickPaintMs"]=brickLayer->paintMs(); state["qtFrontPaintMs"]=frontLayer->paintMs();
+            state["qtFrontPaintCount"]=frontLayer->paintCount();
             packet["state"]=state;
         }
         packet.remove("ops"); packet.remove("caches");

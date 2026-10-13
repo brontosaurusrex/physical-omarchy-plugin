@@ -13,7 +13,7 @@ Window {
     minimumWidth: Math.min(640, game.defaultWindowWidth)
     minimumHeight: Math.min(360, game.defaultWindowHeight)
     visibility: fullscreen ? Window.FullScreen : (game.opened ? Window.Windowed : Window.Hidden)
-    color: game.state.palette ? game.state.palette[0] : Color.background
+    color: game.backdropColor
     onActiveChanged: if (!active && game.opened) game.suspend()
     onClosing: game.close()
     Rectangle {
