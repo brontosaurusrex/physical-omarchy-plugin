@@ -46,7 +46,9 @@ without `--prebuilt` to build against that machine's runtime. These are native
 Linux binaries, not a self-contained AppImage or Flatpak.
 
 Check the ball button, start, sound, right-click capture/release, menu controls,
-Space+F fullscreen, Escape in replay and live play, and dense levels 23, 26 and 27.
+Space+F fullscreen, retaining capture through Super+F and Super+Alt+F (both
+directions), release on switching apps, Escape in replay and live play, and
+dense levels 23, 26 and 27.
 Before calling the release ready, test on at least one additional machine. Only
 Intel HD 520 has been tested so far.
 

@@ -127,6 +127,15 @@ share `GameCore.qml`, render/audio modules and controls. Plugin and standalone
 progress files are separate from each other and from the web version.
 No browser, web server or WebAssembly runs the game.
 
+Mouse capture tracks the playfield's current surface region after layout,
+including letterboxing during window resizing. The Wayland constraint stays
+persistent across temporary compositor unlocks. After an 80 ms pause in geometry
+changes, an inactive constraint is re-requested while the game still has focus.
+This preserves capture through Hyprland's Super+F and Super+Alt+F transitions,
+Space+F and the fullscreen button. Right click, menu, Escape, hiding and focus
+loss cancel the request and its pending resize timer; returning focus alone
+does not capture the mouse again.
+
 ## Audio and test limits
 
 The sample bank is decoded from the original game's runtime Opus files, with
@@ -144,7 +153,9 @@ resampling and scheduling still differ from browser DSP, so this is not
 bit-identical output.
 
 `tests/keyboard.py` sends Qt keyboard events through the actual QML window.
-`tests/pointer_lock.py` verifies Wayland capture through the QML mouse handler.
+`tests/pointer_lock.py` verifies Wayland capture through the QML mouse handler,
+compositor fullscreen/maximize and native fullscreen transitions, focus loss,
+manual reacquisition, menu, Escape and reopening.
 `tests/level_complete.py` embeds a tiny level in a temporary engine build and
 checks actual level completion, smooth debris animation, cached text and corners
 and the return to idle when debris disappears. It leaves game levels untouched.

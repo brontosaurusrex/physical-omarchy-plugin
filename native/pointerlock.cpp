@@ -7,15 +7,30 @@
 #include "relative-pointer-client.h"
 
 PointerLock::PointerLock(QQuickItem *parent):QQuickItem(parent) {
+    resizeTimer.setSingleShot(true);
+    resizeTimer.setInterval(80);
+    connect(&resizeTimer,&QTimer::timeout,this,[this] {
+        if(!lockedPointer || active || !window() || !window()->isActive() || !window()->isVisible())return;
+        // Some compositors deactivate a persistent lock on fullscreen without
+        // reactivating it. Re-request once the resized surface has settled.
+        release();
+        lock();
+    });
     dispatchTimer.setInterval(4);
     connect(&dispatchTimer,&QTimer::timeout,this,[this] {
         if(queue) wl_display_dispatch_queue_pending(display,queue);
     });
     connect(this,&QQuickItem::windowChanged,this,[this](QQuickWindow *next) {
+        disconnect(activeConnection);
+        disconnect(visibleConnection);
+        disconnect(frameConnection);
         release();
         if(next) {
-            connect(next,&QWindow::activeChanged,this,[this,next] { if(!next->isActive()) release(); });
-            connect(next,&QWindow::visibleChanged,this,[this](bool visible) { if(!visible)release(); });
+            activeConnection=connect(next,&QWindow::activeChanged,this,[this,next] { if(!next->isActive()) release(); });
+            visibleConnection=connect(next,&QWindow::visibleChanged,this,[this](bool visible) { if(!visible)release(); });
+            // Ancestors can move the playfield without changing this item's
+            // local bounds. Refresh after layout, before Qt commits the surface.
+            frameConnection=connect(next,&QQuickWindow::afterAnimating,this,[this] { if(lockedPointer)polish(); });
         }
     });
 }
@@ -68,8 +83,8 @@ bool PointerLock::lock() {
     pointer=wl_seat_get_pointer(seat);
     auto native=qGuiApp->nativeInterface<QNativeInterface::QWaylandApplication>();
     auto region=wl_compositor_create_region(native->compositor());
-    const QPointF origin=mapToScene(QPointF(0,0));
-    wl_region_add(region,qRound(origin.x()),qRound(origin.y()),qRound(width()),qRound(height()));
+    regionBounds=mapRectToScene(boundingRect()).toAlignedRect();
+    wl_region_add(region,regionBounds.x(),regionBounds.y(),regionBounds.width(),regionBounds.height());
     relativePointer=zwp_relative_pointer_manager_v1_get_relative_pointer(relativeManager,pointer);
     static const zwp_relative_pointer_v1_listener motion={moved};
     zwp_relative_pointer_v1_add_listener(relativePointer,&motion,this);
@@ -82,7 +97,24 @@ bool PointerLock::lock() {
     emit lockedChanged();
     return true;
 }
+void PointerLock::updatePolish() { updateRegion(); }
+void PointerLock::updateRegion() {
+    if(!lockedPointer || !window())return;
+    const QRect bounds=mapRectToScene(boundingRect()).toAlignedRect();
+    if(bounds==regionBounds)return;
+    regionBounds=bounds;
+    auto native=qGuiApp->nativeInterface<QNativeInterface::QWaylandApplication>();
+    auto region=wl_compositor_create_region(native->compositor());
+    wl_region_add(region,bounds.x(),bounds.y(),bounds.width(),bounds.height());
+    zwp_locked_pointer_v1_set_region(lockedPointer,region);
+    wl_region_destroy(region);
+    wl_display_flush(display);
+    // set_region takes effect on the next surface commit, including when paused.
+    window()->update();
+    resizeTimer.start();
+}
 void PointerLock::release() {
+    resizeTimer.stop();
     dispatchTimer.stop();
     const bool changed=lockedPointer || active;
     if(lockedPointer) { zwp_locked_pointer_v1_destroy(lockedPointer); lockedPointer=nullptr; }
@@ -98,7 +130,8 @@ void PointerLock::activated(void *data,zwp_locked_pointer_v1 *) { static_cast<Po
 void PointerLock::deactivated(void *data,zwp_locked_pointer_v1 *) {
     auto self=static_cast<PointerLock *>(data);
     self->setLocked(false);
-    QMetaObject::invokeMethod(self,[self] { self->release(); },Qt::QueuedConnection);
+    // Persistent constraints can reactivate after compositor/geometry changes.
+    // Explicit release, focus loss and hiding still destroy the request.
 }
 void PointerLock::moved(void *data,zwp_relative_pointer_v1 *,uint32_t,uint32_t,wl_fixed_t dx,wl_fixed_t dy,wl_fixed_t,wl_fixed_t) {
     auto self=static_cast<PointerLock *>(data);

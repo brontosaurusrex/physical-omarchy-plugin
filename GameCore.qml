@@ -46,7 +46,7 @@ Item {
         focusGame();
     }
     function closeMenu() { menuVisible = false; focusGame(); }
-    function toggleFullscreen() { pointerLock.release(); panel.fullscreen = !panel.fullscreen; focusGame(); }
+    function toggleFullscreen() { panel.fullscreen = !panel.fullscreen; focusGame(); }
     function handleEscape() {
         if (state.replay) {
             pointerLock.release();
@@ -210,8 +210,6 @@ Item {
                 width: Math.min(parent.width, parent.height * canvas.gameWidth / canvas.gameHeight)
                 height: width * canvas.gameHeight / canvas.gameWidth
                 focus: true
-                onWidthChanged: pointerLock.release()
-                onHeightChanged: pointerLock.release()
                 GameCanvas { id: canvas; objectName: "physicalCanvas"; frameClockRunning: root.animating; onFrameTick: function(delta) { root.tick(delta); } anchors.fill: parent; theme: root.theme; surroundColor: root.backdropColor; fontFamily: gameFont.status === FontLoader.Ready ? gameFont.name : Style.resolvedFontFamily; }
                 Native.PointerLock {
                     id: pointerLock

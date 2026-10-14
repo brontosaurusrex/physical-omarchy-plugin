@@ -14,6 +14,9 @@ ShellRoot {
     id: root
     property int phase: 0
     property int attempts: 0
+    property int resizeStep: 0
+    property double resizeStarted: 0
+    readonly property var resizeModes: ["fullscreen", "fullscreen", "maximized", "maximized", "native", "native"]
     Port.Physical { id: game }
     TestCase { id: input; parent: game.contentView; when: false }
     function find(item) {
@@ -26,7 +29,7 @@ ShellRoot {
     Component.onCompleted: game.open("{}")
     Timer { interval: 300; running: true; repeat: true; onTriggered: {
         if (game.errorText || game.renderError) { fail(game.errorText || game.renderError); return; }
-        if (++root.attempts > 50) { fail("timeout at phase " + root.phase); return; }
+        if (++root.attempts > 110) { fail("timeout at phase " + root.phase); return; }
         if (!game.engineReady || game.paintedFrames < 2) return;
         if (root.phase === 0) { console.log("POINTER READY"); root.phase = 1; return; }
         if (root.phase === 1) { click(); root.phase = 2; return; }
@@ -39,6 +42,43 @@ ShellRoot {
             click(); root.phase = 4; return;
         }
         if (root.phase === 4) {
+            if (!game.mouseLocked) return;
+            root.phase = 12; return;
+        }
+        if (root.phase === 12) {
+            if (root.resizeStep === root.resizeModes.length) {
+                // Resize must not leave a stale request that prevents release.
+                click(); root.phase = 14; return;
+            }
+            var mode = root.resizeModes[root.resizeStep];
+            root.resizeStarted = Date.now(); root.phase = 13;
+            if (mode === "native") game.toggleFullscreen();
+            else console.log("POINTER COMPOSITOR", mode);
+            return;
+        }
+        if (root.phase === 13 && Date.now() - root.resizeStarted > 600) {
+            if (!game.mouseCapture.requested || !game.mouseLocked) { fail("capture lost after " + root.resizeModes[root.resizeStep] + " transition " + root.resizeStep); return; }
+            console.log("POINTER capture survived", root.resizeModes[root.resizeStep], root.resizeStep);
+            ++root.resizeStep; root.phase = 12; return;
+        }
+        if (root.phase === 14) {
+            if (game.mouseCapture.requested || game.mouseLocked) { fail("right click after resize did not release"); return; }
+            click(); root.phase = 15; return;
+        }
+        if (root.phase === 15) {
+            if (!game.mouseLocked) return;
+            console.log("POINTER FOCUS LOSS"); root.phase = 16; return;
+        }
+        if (root.phase === 16) {
+            if (game.mouseCapture.requested || game.mouseLocked) { fail("focus loss did not release"); return; }
+            console.log("POINTER FOCUS RETURN"); root.phase = 17; return;
+        }
+        if (root.phase === 17) {
+            // Returning focus must not capture again until another right click.
+            if (game.mouseCapture.requested || game.mouseLocked) { fail("returning focus recaptured mouse"); return; }
+            click(); root.phase = 18; return;
+        }
+        if (root.phase === 18) {
             if (!game.mouseLocked) return;
             input.keyClick(Qt.Key_Escape); root.phase = 5; return;
         }
@@ -61,7 +101,7 @@ ShellRoot {
         if (root.phase === 10) { input.keyClick(Qt.Key_Escape); root.phase = 11; return; }
         if (root.phase === 11) {
             if (game.opened || game.fullscreen || game.mouseCapture.requested) { fail("Escape in fullscreen did not close"); return; }
-            console.log("POINTER PASS: right click lock/release, reacquire, Escape, menu, fullscreen, reopen"); Qt.exit(0);
+            console.log("POINTER PASS: right click lock/release, compositor fullscreen/maximize, native fullscreen, focus loss, reacquire, Escape, menu, reopen"); Qt.exit(0);
         }
     } }
 }
@@ -77,8 +117,9 @@ with tempfile.TemporaryDirectory(prefix='physical-pointer-test-') as directory:
     (folder / 'shell.qml').write_text(harness)
     env = dict(os.environ, PHYSICAL_TESTING='1', PHYSICAL_STATE_PATH=str(folder / 'progress.json'))
     cursor = json.loads(subprocess.check_output(['hyprctl', 'cursorpos', '-j']))
+    previous = json.loads(subprocess.check_output(['hyprctl', 'activewindow', '-j']))
     run = subprocess.Popen(['quickshell', '--no-color', '-p', str(folder / 'shell.qml')], env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    timeout = threading.Timer(25, run.kill); timeout.start()
+    timeout = threading.Timer(40, run.kill); timeout.start()
     lines = []
     try:
         for line in run.stdout:
@@ -90,10 +131,24 @@ with tempfile.TemporaryDirectory(prefix='physical-pointer-test-') as directory:
                 x, y = [client['at'][i] + client['size'][i] // 2 for i in (0, 1)]
                 code = 'hl.dispatch(hl.dsp.focus({window=' + json.dumps('address:' + client['address']) + '})); hl.dispatch(hl.dsp.cursor.move({x=' + str(x) + ',y=' + str(y) + '}))'
                 subprocess.run(['hyprctl', 'eval', code], check=True, stdout=subprocess.DEVNULL)
+            if 'POINTER FOCUS LOSS' in line:
+                code = 'hl.dispatch(hl.dsp.focus({window=' + json.dumps('address:' + previous['address']) + '}))'
+                subprocess.run(['hyprctl', 'eval', code], check=True, stdout=subprocess.DEVNULL)
+            if 'POINTER FOCUS RETURN' in line:
+                code = 'hl.dispatch(hl.dsp.focus({window=' + json.dumps('address:' + client['address']) + '}))'
+                subprocess.run(['hyprctl', 'eval', code], check=True, stdout=subprocess.DEVNULL)
+            if 'POINTER COMPOSITOR ' in line:
+                mode = line.split('POINTER COMPOSITOR ', 1)[1].strip()
+                assert mode in ('fullscreen', 'maximized'), mode
+                # Use the exact dispatchers bound to Super+F and Super+Alt+F.
+                code = 'hl.dispatch(hl.dsp.focus({window=' + json.dumps('address:' + client['address']) + '})); hl.dispatch(hl.dsp.window.fullscreen({mode=' + json.dumps(mode) + '}))'
+                subprocess.run(['hyprctl', 'eval', code], check=True, stdout=subprocess.DEVNULL)
         run.wait()
     finally:
         timeout.cancel()
         if run.poll() is None: run.kill(); run.wait()
         subprocess.run(['hyprctl', 'eval', 'hl.dispatch(hl.dsp.cursor.move({x=' + str(cursor['x']) + ',y=' + str(cursor['y']) + '}))'], stdout=subprocess.DEVNULL)
+        if previous.get('address'):
+            subprocess.run(['hyprctl', 'eval', 'hl.dispatch(hl.dsp.focus({window=' + json.dumps('address:' + previous['address']) + '}))'], stdout=subprocess.DEVNULL)
     if run.returncode or not any('POINTER PASS:' in line for line in lines):
         print(''.join(lines)); raise SystemExit(run.returncode or 1)

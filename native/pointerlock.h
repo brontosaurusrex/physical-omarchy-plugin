@@ -25,9 +25,15 @@ class PointerLock : public QQuickItem {
     zwp_locked_pointer_v1 *lockedPointer=nullptr;
     zwp_relative_pointer_v1 *relativePointer=nullptr;
     QTimer dispatchTimer;
+    QTimer resizeTimer;
+    QMetaObject::Connection activeConnection, visibleConnection, frameConnection;
+    QRect regionBounds;
     bool active=false;
     bool initialize();
     void setLocked(bool value);
+    void updateRegion();
+protected:
+    void updatePolish() override;
 public:
     PointerLock(QQuickItem *parent=nullptr);
     ~PointerLock() override;
