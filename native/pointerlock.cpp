@@ -7,12 +7,12 @@
 #include "relative-pointer-client.h"
 
 PointerLock::PointerLock(QQuickItem *parent):QQuickItem(parent) {
-    resizeTimer.setSingleShot(true);
-    resizeTimer.setInterval(80);
-    connect(&resizeTimer,&QTimer::timeout,this,[this] {
+    recoveryTimer.setSingleShot(true);
+    recoveryTimer.setInterval(80);
+    connect(&recoveryTimer,&QTimer::timeout,this,[this] {
         if(!lockedPointer || active || !window() || !window()->isActive() || !window()->isVisible())return;
-        // Some compositors deactivate a persistent lock on fullscreen without
-        // reactivating it. Re-request once the resized surface has settled.
+        // Fullscreen changes and passive overlays can deactivate a persistent
+        // lock. Re-request after the surface and pointer focus have settled.
         release();
         lock();
     });
@@ -89,11 +89,16 @@ bool PointerLock::lock() {
     static const zwp_relative_pointer_v1_listener motion={moved};
     zwp_relative_pointer_v1_add_listener(relativePointer,&motion,this);
     lockedPointer=zwp_pointer_constraints_v1_lock_pointer(constraints,surface,pointer,region,ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT);
+    // Keep the unlocked pointer clear of overlays that can cover the position
+    // where capture began (for example a toast in the top-right corner).
+    const QPointF center=regionBounds.toRectF().center();
+    zwp_locked_pointer_v1_set_cursor_position_hint(lockedPointer,wl_fixed_from_double(center.x()),wl_fixed_from_double(center.y()));
     wl_region_destroy(region);
     static const zwp_locked_pointer_v1_listener state={activated,deactivated};
     zwp_locked_pointer_v1_add_listener(lockedPointer,&state,this);
     wl_display_flush(display);
     dispatchTimer.start();
+    window()->update(); // Commit the double-buffered cursor-position hint.
     emit lockedChanged();
     return true;
 }
@@ -107,14 +112,16 @@ void PointerLock::updateRegion() {
     auto region=wl_compositor_create_region(native->compositor());
     wl_region_add(region,bounds.x(),bounds.y(),bounds.width(),bounds.height());
     zwp_locked_pointer_v1_set_region(lockedPointer,region);
+    const QPointF center=bounds.toRectF().center();
+    zwp_locked_pointer_v1_set_cursor_position_hint(lockedPointer,wl_fixed_from_double(center.x()),wl_fixed_from_double(center.y()));
     wl_region_destroy(region);
     wl_display_flush(display);
     // set_region takes effect on the next surface commit, including when paused.
     window()->update();
-    resizeTimer.start();
+    recoveryTimer.start();
 }
 void PointerLock::release() {
-    resizeTimer.stop();
+    recoveryTimer.stop();
     dispatchTimer.stop();
     const bool changed=lockedPointer || active;
     if(lockedPointer) { zwp_locked_pointer_v1_destroy(lockedPointer); lockedPointer=nullptr; }
@@ -130,8 +137,10 @@ void PointerLock::activated(void *data,zwp_locked_pointer_v1 *) { static_cast<Po
 void PointerLock::deactivated(void *data,zwp_locked_pointer_v1 *) {
     auto self=static_cast<PointerLock *>(data);
     self->setLocked(false);
-    // Persistent constraints can reactivate after compositor/geometry changes.
-    // Explicit release, focus loss and hiding still destroy the request.
+    // A passive overlay can deactivate a persistent lock without changing the
+    // game geometry or keyboard focus. Recover that case as well as resizing.
+    // Explicit release, focus loss and hiding cancel this timer.
+    self->recoveryTimer.start();
 }
 void PointerLock::moved(void *data,zwp_relative_pointer_v1 *,uint32_t,uint32_t,wl_fixed_t dx,wl_fixed_t dy,wl_fixed_t,wl_fixed_t) {
     auto self=static_cast<PointerLock *>(data);

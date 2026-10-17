@@ -41,7 +41,7 @@ checks = r'''
             if (!game.state.replay) { fail("replay"); return; }
             input.keyClick(Qt.Key_Escape); break;
         case 5:
-            if (game.state.replay || !game.opened || !window.visible) { fail("replay Escape"); return; }
+            if (game.state.replay || !game.opened || !window.visible) { fail("replay Escape: replay=" + game.state.replay + " opened=" + game.opened + " visible=" + window.visible + " active=" + window.active + " focus=" + game.contentView.activeFocus); return; }
             input.keyPress(Qt.Key_Space); input.keyClick(Qt.Key_F); input.keyRelease(Qt.Key_Space); break;
         case 6:
             if (!window.fullscreen || window.visibility !== Window.FullScreen) { fail("fullscreen"); return; }

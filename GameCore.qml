@@ -86,6 +86,13 @@ Item {
     readonly property var mouseCapture: pointerLock
     readonly property var gameView: canvas
     readonly property var contentView: card
+    function trackPointer(position) {
+        if (pointerLock.requested || gameInput.width <= 0) return;
+        var local = gameInput.mapFromItem(card, position);
+        pointerX = local.x * canvas.gameWidth / gameInput.width;
+        pointerY = local.y * canvas.gameHeight / gameInput.height;
+        pointerDirty = true;
+    }
     property bool windowSetupReady: true
     readonly property string enginePath: Qt.resolvedUrl("bin/physical-engine").toString().replace(/^file:\/\//, "")
     readonly property var theme: ({ background: String(Color.background), foreground: String(Color.foreground), accent: String(Color.accent), urgent: String(Color.urgent), muted: String(Color.muted) })
@@ -199,6 +206,14 @@ Item {
         id: card
         parent: root.surface
         anchors.fill: parent
+        // Follow the pointer through the surround/letterboxing too. A passive
+        // handler leaves HUD/menu clicks alone and never captures the desktop.
+        HoverHandler {
+            enabled: root.opened && !root.menuVisible && !pointerLock.requested
+            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+            onPointChanged: if (hovered) root.trackPointer(point.position)
+            onHoveredChanged: if (hovered) root.trackPointer(point.position)
+        }
         Shortcut { sequence: "Escape"; context: Qt.WindowShortcut; enabled: root.opened; autoRepeat: false; onActivated: root.handleEscape(); }
         Item {
             id: playArea
@@ -223,12 +238,6 @@ Item {
                     hoverEnabled: true
                     acceptedButtons: Qt.LeftButton | Qt.RightButton
                     cursorShape: pointerLock.locked ? Qt.BlankCursor : Qt.ArrowCursor
-                    onPositionChanged: function(mouse) {
-                        if (pointerLock.requested) return;
-                        root.pointerX = mouse.x * canvas.gameWidth / width;
-                        root.pointerY = mouse.y * canvas.gameHeight / height;
-                        root.pointerDirty = true;
-                    }
                     onPressed: function(mouse) {
                         gameInput.forceActiveFocus();
                         if (mouse.button === Qt.LeftButton) root.send({ action: "pointer", down: true, x: mouse.x * canvas.gameWidth / width, y: mouse.y * canvas.gameHeight / height });

@@ -130,11 +130,18 @@ No browser, web server or WebAssembly runs the game.
 Mouse capture tracks the playfield's current surface region after layout,
 including letterboxing during window resizing. The Wayland constraint stays
 persistent across temporary compositor unlocks. After an 80 ms pause in geometry
-changes, an inactive constraint is re-requested while the game still has focus.
+changes or a compositor unlock, an inactive constraint is re-requested while
+the game still has focus. A committed Wayland cursor-position hint requests
+the playfield center as the release position, clear of notification cards that
+can cover the original capture position. This lets capture recover from passive
+notifications without pausing the game.
 This preserves capture through Hyprland's Super+F and Super+Alt+F transitions,
 Space+F and the fullscreen button. Right click, menu, Escape, hiding and focus
-loss cancel the request and its pending resize timer; returning focus alone
+loss cancel the request and its pending recovery timer; returning focus alone
 does not capture the mouse again.
+Uncaptured pointer movement is tracked across the whole game window, including
+the blue surround and letterboxing, with paddle targets clamped by the engine.
+The handler is passive; leaving the window leaves the desktop pointer free.
 
 ## Audio and test limits
 
@@ -155,7 +162,23 @@ bit-identical output.
 `tests/keyboard.py` sends Qt keyboard events through the actual QML window.
 `tests/pointer_lock.py` verifies Wayland capture through the QML mouse handler,
 compositor fullscreen/maximize and native fullscreen transitions, focus loss,
-manual reacquisition, menu, Escape and reopening.
+passive notifications, manual reacquisition, menu, Escape and reopening.
+`PHYSICAL_MOUSE_SECONDS=300 python3 tests/mouse_torture.py` repeats these paths
+on the live Wayland desktop, also checking uncaptured margin movement through
+to the engine and that the desktop cursor can leave the window. It uses a
+temporary collision-free level and private progress, then restores the cursor
+and previously focused window. Same-process notification overlays reproduce
+the shell's popup behavior; periodic real desktop notifications are included.
+A temporary Wayland virtual mouse also checks actual relative-motion delivery
+in both directions, after notification recovery, and outside the game window.
+Its [wlroots protocol](https://github.com/swaywm/wlr-protocols/blob/master/unstable/wlr-virtual-pointer-unstable-v1.xml)
+is vendored with its MIT notice in `tests/protocols/`; the helper is compiled
+only for this test. An external watchdog checks UI heartbeats, engine replies
+and rendered frames. Set `PHYSICAL_MOUSE_INJECT_FREEZE=ui` or `engine` to
+verify detection with a deliberately stopped test process. Qt input and the
+virtual mouse exercise software paths; they cannot reproduce a USB device or
+cable failure. Physical mouse hardware still needs manual playtesting.
+The five-minute test runs separately from `./check`.
 `tests/level_complete.py` embeds a tiny level in a temporary engine build and
 checks actual level completion, smooth debris animation, cached text and corners
 and the return to idle when debris disappears. It leaves game levels untouched.

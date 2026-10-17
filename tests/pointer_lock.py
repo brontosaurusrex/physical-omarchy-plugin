@@ -6,18 +6,36 @@ project = pathlib.Path(__file__).resolve().parents[1]
 shell = pathlib.Path('/usr/share/omarchy/shell')
 harness = r'''
 import QtQuick
+import QtQuick.Window
 import QtTest
 import Quickshell
+import Quickshell.Wayland
 import qs.Commons
 import "Port" as Port
 ShellRoot {
     id: root
+    property bool popup: false
     property int phase: 0
     property int attempts: 0
     property int resizeStep: 0
     property double resizeStarted: 0
     readonly property var resizeModes: ["fullscreen", "fullscreen", "maximized", "maximized", "native", "native"]
     Port.Physical { id: game }
+    PanelWindow {
+        visible: root.popup
+        anchors { top: true; bottom: true; left: true; right: true }
+        exclusionMode: ExclusionMode.Ignore
+        WlrLayershell.namespace: "physical-pointer-notification-test"
+        WlrLayershell.layer: WlrLayer.Overlay
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+        color: "transparent"
+        mask: Region { item: toast }
+        Rectangle {
+            id: toast
+            anchors.top: parent.top; anchors.right: parent.right; anchors.margins: 30
+            width: 360; height: 110; color: "#23344a"
+        }
+    }
     TestCase { id: input; parent: game.contentView; when: false }
     function find(item) {
         if (item.objectName === "physicalPointerInput") return item;
@@ -25,7 +43,7 @@ ShellRoot {
         return null;
     }
     function click() { var area = find(game.contentView); input.mouseClick(area, area.width / 2, area.height / 2, Qt.RightButton); }
-    function fail(message) { console.error("POINTER FAILED", message, "requested", game.mouseCapture.requested, "locked", game.mouseLocked, "notice", game.notice); Qt.exit(1); }
+    function fail(message) { console.error("POINTER FAILED", message, "requested", game.mouseCapture.requested, "locked", game.mouseLocked, "notice", game.notice, "windowActive", game.contentView.Window.window.active); Qt.exit(1); }
     Component.onCompleted: game.open("{}")
     Timer { interval: 300; running: true; repeat: true; onTriggered: {
         if (game.errorText || game.renderError) { fail(game.errorText || game.renderError); return; }
@@ -35,7 +53,15 @@ ShellRoot {
         if (root.phase === 1) { click(); root.phase = 2; return; }
         if (root.phase === 2) {
             if (!game.mouseLocked) { console.log("POINTER waiting",game.mouseCapture.supported,game.mouseCapture.requested,game.notice); return; }
-            console.log("POINTER right click captured"); click(); root.phase = 3; return;
+            console.log("POINTER right click captured"); root.popup = true; root.phase = 25; return;
+        }
+        if (root.phase === 25) {
+            if (!game.mouseLocked || !game.mouseCapture.requested || game.state.paused) { fail("notification interrupted capture"); return; }
+            root.popup = false; root.phase = 26; return;
+        }
+        if (root.phase === 26) {
+            if (!game.mouseLocked) { fail("capture lost after notification disappeared"); return; }
+            console.log("POINTER capture survived passive notification"); click(); root.phase = 3; return;
         }
         if (root.phase === 3) {
             if (game.mouseCapture.requested || game.mouseLocked) { fail("second right click did not release"); return; }
@@ -86,7 +112,15 @@ ShellRoot {
             if (game.opened || game.windowView.visible || game.mouseCapture.requested) { fail("Escape did not close and release"); return; }
             game.open("{}"); root.phase = 6; return;
         }
-        if (root.phase === 6) { click(); root.phase = 7; return; }
+        if (root.phase === 6) {
+            // QtTest clicks do not move the real compositor pointer or focus a
+            // remapped Wayland surface. Restore those prerequisites first.
+            console.log("POINTER REOPEN READY"); root.phase = 27; return;
+        }
+        if (root.phase === 27) {
+            if (!game.contentView.Window.window.active) { fail("test window did not regain focus"); return; }
+            click(); root.phase = 7; return;
+        }
         if (root.phase === 7) {
             if (!game.mouseLocked) return;
             game.toggleMenu();
@@ -101,7 +135,7 @@ ShellRoot {
         if (root.phase === 10) { input.keyClick(Qt.Key_Escape); root.phase = 11; return; }
         if (root.phase === 11) {
             if (game.opened || game.fullscreen || game.mouseCapture.requested) { fail("Escape in fullscreen did not close"); return; }
-            console.log("POINTER PASS: right click lock/release, compositor fullscreen/maximize, native fullscreen, focus loss, reacquire, Escape, menu, reopen"); Qt.exit(0);
+            console.log("POINTER PASS: right click lock/release, passive notification, compositor fullscreen/maximize, native fullscreen, focus loss, reacquire, Escape, menu, reopen"); Qt.exit(0);
         }
     } }
 }
@@ -125,10 +159,11 @@ with tempfile.TemporaryDirectory(prefix='physical-pointer-test-') as directory:
         for line in run.stdout:
             lines.append(line)
             if 'POINTER' in line or 'ERROR' in line: print(line.strip(), flush=True)
-            if 'POINTER READY' in line:
+            if 'POINTER READY' in line or 'POINTER REOPEN READY' in line:
                 clients = json.loads(subprocess.check_output(['hyprctl', 'clients', '-j']))
                 client = next(c for c in clients if c['pid'] == run.pid and c['title'] == 'Physical')
-                x, y = [client['at'][i] + client['size'][i] // 2 for i in (0, 1)]
+                offset = (client['size'][0]-50, 50) if 'POINTER READY' in line else (client['size'][0]//2, client['size'][1]//2)
+                x, y = [client['at'][i] + offset[i] for i in (0, 1)]
                 code = 'hl.dispatch(hl.dsp.focus({window=' + json.dumps('address:' + client['address']) + '})); hl.dispatch(hl.dsp.cursor.move({x=' + str(x) + ',y=' + str(y) + '}))'
                 subprocess.run(['hyprctl', 'eval', code], check=True, stdout=subprocess.DEVNULL)
             if 'POINTER FOCUS LOSS' in line:
