@@ -24,27 +24,46 @@ Ui.BarWidget {
             font.pixelSize: button.fontSize
         }
         Shape {
-            id: ball
+            id: icon
             anchors.centerIn: parent
             width: Math.max(1, Math.min(radioIconMetrics.tightBoundingRect.width, radioIconMetrics.tightBoundingRect.height) - 2 / Screen.devicePixelRatio)
             height: width
-            // Preserve curvature instead of the rounded Rectangle's coarse
-            // corner segments. The curve renderer includes edge antialiasing.
             preferredRendererType: Shape.CurveRenderer
+            property color iconColor: button.active && button.useActiveColor ? button.activeColor : button.foreground
+            Behavior on iconColor {
+                enabled: !root.bar || root.bar.foregroundAnimationEnabled
+                ColorAnimation { duration: 160 }
+            }
+
+            // Ball above the paddle; both fit within the previous icon bounds.
             ShapePath {
                 strokeWidth: -1
-                fillColor: button.active && button.useActiveColor ? button.activeColor : button.foreground
+                fillColor: icon.iconColor
                 PathAngleArc {
-                    centerX: ball.width / 2
-                    centerY: ball.height / 2
-                    radiusX: ball.width / 2
-                    radiusY: ball.height / 2
+                    centerX: icon.width * 0.70
+                    centerY: icon.height * 0.23
+                    radiusX: icon.width * 0.15
+                    radiusY: icon.height * 0.15
                     startAngle: 0
                     sweepAngle: 360
                 }
-                Behavior on fillColor {
-                    enabled: !root.bar || root.bar.foregroundAnimationEnabled
-                    ColorAnimation { duration: 160 }
+            }
+            ShapePath {
+                strokeWidth: -1
+                fillColor: icon.iconColor
+                startX: icon.width * 0.14
+                startY: icon.height * 0.73
+                PathLine { x: icon.width * 0.86; y: icon.height * 0.73 }
+                PathArc {
+                    x: icon.width * 0.86; y: icon.height * 0.91
+                    radiusX: icon.width * 0.09; radiusY: icon.height * 0.09
+                    direction: PathArc.Clockwise
+                }
+                PathLine { x: icon.width * 0.14; y: icon.height * 0.91 }
+                PathArc {
+                    x: icon.width * 0.14; y: icon.height * 0.73
+                    radiusX: icon.width * 0.09; radiusY: icon.height * 0.09
+                    direction: PathArc.Clockwise
                 }
             }
         }

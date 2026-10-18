@@ -117,4 +117,4 @@ if ! $discovered; then
   exit 1
 fi
 omarchy plugin enable b.physical
-echo "Installed Physical. Open it from the white ball icon or: omarchy-shell shell toggle b.physical"
+echo "Installed Physical. Open it from the paddle-and-ball icon or: omarchy-shell shell toggle b.physical"

@@ -11,7 +11,7 @@ cd physical-omarchy-plugin
 ```
 
 The installer offers missing dependencies, builds the binaries, installs the
-plugin and restarts the shell. Click the ball icon in the bar to open it.
+plugin and restarts the shell. Click the paddle-and-ball icon in the bar to open it.
 
 ## Prebuilt bundles
 
