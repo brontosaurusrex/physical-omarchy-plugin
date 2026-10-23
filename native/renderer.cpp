@@ -24,6 +24,7 @@
 #include "pointerlock.h"
 #include "audiomixer.h"
 #include "engineprocess.h"
+#include "framerecorder.h"
 
 struct Vertex { float x,y; unsigned char r,g,b,a; };
 
@@ -236,6 +237,8 @@ class GameRenderer : public QQuickPaintedItem {
     Q_PROPERTY(QString renderError READ renderError NOTIFY renderErrorChanged)
     Q_PROPERTY(QString fontFamily READ fontFamily WRITE setFontFamily NOTIFY fontFamilyChanged)
     Q_PROPERTY(bool frameClockRunning READ frameClockRunning WRITE setFrameClockRunning NOTIFY frameClockRunningChanged)
+    Q_PROPERTY(bool diagnosticsEnabled READ diagnosticsEnabled CONSTANT)
+    Q_PROPERTY(QString diagnosticsDirectory READ diagnosticsDirectory CONSTANT)
     struct Scene { QPicture back, bricks, front; qreal width=1800, height=900; quint64 brickRevision=0; bool gpu=false; QVector<Vertex> slow,fast,bolts; };
     struct Style {
         QColor fill=Qt::black, stroke=Qt::black;
@@ -270,6 +273,8 @@ class GameRenderer : public QQuickPaintedItem {
     std::atomic<quint64> clockEpoch{0};
     QElapsedTimer frameClock;
     QMetaObject::Connection clockConnection;
+    QMetaObject::Connection submissionConnection;
+    FrameRecorder recorder;
 
     QString error, family="monospace";
     qreal gw=1800, gh=900;
@@ -479,8 +484,11 @@ public:
         frameClock.start();
         connect(this,&QQuickItem::windowChanged,this,[this](QQuickWindow *view) {
             disconnect(clockConnection);
+            disconnect(submissionConnection);
             clockEpoch.fetch_add(2);
             if(!view)return;
+            if(recorder.enabled)submissionConnection=connect(view,&QQuickWindow::frameSwapped,this,
+                [counter=recorder.submitted]{counter->fetch_add(1,std::memory_order_relaxed);},Qt::DirectConnection);
             // This window's preparation point gives the engine a full render
             // interval to return its next scene, without a shared animation timer.
             clockConnection=connect(view,&QQuickWindow::afterAnimating,this,
@@ -492,6 +500,7 @@ public:
                     const qreal refresh=view->screen() ? view->screen()->refreshRate() : 60.;
                     const qreal elapsed=last ? (now-last)/1e9 : 1./qMax(1.,refresh);
                     last=now;
+                    recorder.clockTick(elapsed);
                     if(clockEpoch.load()==epoch) emit frameTick(elapsed);
                 },Qt::DirectConnection);
         });
@@ -511,6 +520,24 @@ public:
         frontLayer->setRenderTarget(QQuickPaintedItem::Image);
     }
     bool frameClockRunning()const{return clockEpoch.load()&1;}
+    bool diagnosticsEnabled()const{return recorder.enabled;}
+    QString diagnosticsDirectory()const{return recorder.path();}
+    Q_INVOKABLE void diagnosticTickSent(){recorder.tickSent();}
+    Q_INVOKABLE void diagnosticTickReply(const QVariantMap &timing={},qint64 receivedUs=0){recorder.tickReply(QJsonObject::fromVariantMap(timing),receivedUs);}
+    Q_INVOKABLE void diagnosticResetRequests(){recorder.resetRequests();}
+    Q_INVOKABLE void beginFrameDiagnostics(){recorder.begin();}
+    Q_INVOKABLE void finishFrameDiagnostics(){recorder.finish("window-closed");}
+    Q_INVOKABLE void sampleFrameDiagnostics(const QVariantMap &values) {
+        auto state=QJsonObject::fromVariantMap(values);
+        if(window()) {
+            state["window_active"]=window()->isActive();
+            state["window_visible"]=window()->isVisible();
+            state["device_pixel_ratio"]=window()->effectiveDevicePixelRatio();
+            state["graphics_api"]=int(window()->rendererInterface()->graphicsApi());
+            state["screen_refresh_hz"]=window()->screen()?window()->screen()->refreshRate():0;
+        }
+        recorder.sample(state);
+    }
     void setFrameClockRunning(bool active) {
         if(active==frameClockRunning())return;
         // A new epoch discards the idle interval and any previous window clock.
@@ -523,6 +550,7 @@ public:
     QString fontFamily()const{return family;}
     void setFontFamily(const QString &value) { if(family==value)return; family=value; emit fontFamilyChanged(); }
     Q_INVOKABLE QVariantMap acceptLine(const QString &line) {
+        QElapsedTimer diagnosticTimer; if(recorder.enabled)diagnosticTimer.start();
         const bool profile=qEnvironmentVariableIsSet("PHYSICAL_RENDER_TIMINGS");
         QElapsedTimer timer; if(profile) timer.start();
         QJsonParseError parse;
@@ -587,9 +615,11 @@ public:
         packet.remove("ops"); packet.remove("caches"); packet.remove("debrisShapes");
         if(!error.isEmpty()) emit renderErrorChanged();
         update();
+        if(recorder.enabled)recorder.acceptedFrame(diagnosticTimer.nsecsElapsed()/1e6);
         return packet.toVariantMap();
     }
     void paint(QPainter *painter) override {
+        QElapsedTimer diagnosticTimer; if(recorder.enabled)diagnosticTimer.start();
         std::shared_ptr<Scene> current;
         { QMutexLocker lock(&mutex); current=scene; }
         if(width()<=0 || height()<=0)return;
@@ -609,6 +639,7 @@ public:
         painter->save(); painter->scale(width()/current->width,height()/current->height);
         if(!current->gpu) painter->drawPicture(0,0,current->front); painter->restore();
         count.fetch_add(1);
+        if(recorder.enabled)recorder.paintedFrame(diagnosticTimer.nsecsElapsed());
         QMetaObject::invokeMethod(this,[this]{ emit paintedFramesChanged(); },Qt::QueuedConnection);
     }
 protected:

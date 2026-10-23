@@ -6,6 +6,7 @@ __pycache__/
 /native/libphysicalrenderer.so*
 /native/qmldir
 /bin/renderer-test
+/bin/frame-recorder-test
 
 /bin/pointerlock.moc
 /bin/pointerlock.o

@@ -74,6 +74,9 @@ Item {
         send({ action: "key", key: keyName(event), code: keyName(event), down: false });
     }
     property int frameReplies: 0
+    property int diagnosticRelativeEvents: 0
+    property int diagnosticAbsoluteEvents: 0
+    Component.onCompleted: if (canvas.diagnosticsEnabled) console.info("Physical frame recorder enabled:", canvas.diagnosticsDirectory)
     property var state: ({})
     property var sliders: []
     property string errorText: ""
@@ -87,6 +90,7 @@ Item {
     readonly property var gameView: canvas
     readonly property var contentView: card
     function trackPointer(position) {
+        if (canvas.diagnosticsEnabled) diagnosticAbsoluteEvents++;
         if (pointerLock.requested || gameInput.width <= 0) return;
         var local = gameInput.mapFromItem(card, position);
         pointerX = local.x * canvas.gameWidth / gameInput.width;
@@ -106,6 +110,7 @@ Item {
         engine.write(JSON.stringify(data) + "\n");
     }
     function open(payloadJson) {
+        if (!opened && canvas.diagnosticsEnabled) canvas.beginFrameDiagnostics();
         if (launchScreen) panel.screen = launchScreen;
         opened = true;
         if (windowSetupReady) panel.visible = true;
@@ -116,6 +121,7 @@ Item {
         Qt.callLater(function() { gameInput.forceActiveFocus(); });
     }
     function close() {
+        if (canvas.diagnosticsEnabled) canvas.finishFrameDiagnostics();
         pointerLock.release();
         spaceHeld = false; fullscreenChord = false; menuVisible = false; panel.fullscreen = false;
         send({ action: "visibility", down: false });
@@ -160,7 +166,8 @@ Item {
             frameReplies++;
             var first = !engineReady;
             engineReady = true;
-            if (packet.action === "tick") ticksPending = Math.max(0, ticksPending - 1);
+            if (packet._diagnostics) engine.diagnosticAcknowledge(packet._diagnostics.sequence);
+            if (packet.action === "tick") { ticksPending = Math.max(0, ticksPending - 1); canvas.diagnosticTickReply(packet._diagnostics || {}, engine.diagnosticReceivedUs()); }
             state = packet.state;
             if (packet.sliders) sliders = packet.sliders;
             if (packet.room) audio.setRoom(packet.room);
@@ -182,6 +189,7 @@ Item {
         if (ticksPending >= 2 || !engineReady || !opened) return;
         if (pointerDirty) { pointerDirty = false; send({ action: "pointer", x: pointerX, y: pointerY }); }
         ticksPending++;
+        canvas.diagnosticTickSent();
         var elapsed = pendingFrameTime;
         pendingFrameTime = 0;
         send(elapsed > 0 ? { action: "tick", dt: elapsed } : { action: "tick" });
@@ -196,10 +204,33 @@ Item {
         onExited: function(exitCode) {
             root.engineReady = false;
             root.ticksPending = 0;
+            canvas.diagnosticResetRequests();
             if (root.opened) root.errorText = "Physical engine stopped (" + exitCode + "). Reopen Physical to retry.";
         }
     }
     Timer { interval: 100; repeat: true; running: root.opened && root.engineReady && !root.animating; onTriggered: root.tick(); }
+    Timer {
+        interval: 1000; repeat: true; running: root.opened && canvas.diagnosticsEnabled
+        onTriggered: {
+            var snapshot = {
+                active_gameplay: root.animating && !root.state.complete && !root.state.ready && !root.state.gameOver,
+                opened: root.opened, animating: root.animating, paused: root.state.paused === true,
+                menu_visible: root.menuVisible, fullscreen: root.fullscreen,
+                engine_ready: root.engineReady, engine_fps: root.state.fps || 0,
+                ticks_pending: root.ticksPending, queued_time_ms: root.pendingFrameTime * 1000,
+                mouse_locked: root.mouseLocked, lock_requested: pointerLock.requested,
+                relative_mouse_events: root.diagnosticRelativeEvents,
+                absolute_mouse_events: root.diagnosticAbsoluteEvents,
+                fps_overlay: root.state.fpsVisible === true, level: root.state.level || 0,
+                balls: root.state.balls || 0, debris: root.state.debrisPieces || 0,
+                replay: root.state.replay === true, replay_frames: root.state.replayFrames || 0
+            };
+            var transport = engine.diagnosticTransportState();
+            for (var key in transport) snapshot[key] = transport[key];
+            canvas.sampleFrameDiagnostics(snapshot);
+            root.diagnosticRelativeEvents = root.diagnosticAbsoluteEvents = 0;
+        }
+    }
     Timer { id: noticeTimer; interval: 6000; onTriggered: root.notice = ""; }
     AudioPool { id: audio; enabled: root.state.sound === true; volume: root.state.volume === undefined ? 0.25 : root.state.volume; }
     Item {
@@ -230,7 +261,7 @@ Item {
                     id: pointerLock
                     anchors.fill: parent
                     onLockedChanged: { root.pointerDirty = false; root.send({action: "pointer-lock", down: locked}); }
-                    onRelativeMotion: function(dx, dy) { root.send({action: "relative-pointer", x: dx * canvas.gameWidth / gameInput.width}); }
+                    onRelativeMotion: function(dx, dy) { if (canvas.diagnosticsEnabled) root.diagnosticRelativeEvents++; root.send({action: "relative-pointer", x: dx * canvas.gameWidth / gameInput.width}); }
                 }
                 MouseArea {
                     objectName: "physicalPointerInput"

@@ -17,18 +17,20 @@ import (
 var nativeLevels embed.FS
 
 type nativeCommand struct {
-	Action string            `json:"action"`
-	Key    string            `json:"key"`
-	Code   string            `json:"code"`
-	Repeat bool              `json:"repeat"`
-	Shift  bool              `json:"shift"`
-	Down   bool              `json:"down"`
-	X      float64           `json:"x"`
-	Y      float64           `json:"y"`
-	DT     float64           `json:"dt"`
-	Value  float64           `json:"value"`
-	Group  string            `json:"group"`
-	Theme  map[string]string `json:"theme"`
+	DiagnosticSequence int64             `json:"_diag_seq"`
+	DiagnosticSentUs   int64             `json:"_diag_sent_us"`
+	Action             string            `json:"action"`
+	Key                string            `json:"key"`
+	Code               string            `json:"code"`
+	Repeat             bool              `json:"repeat"`
+	Shift              bool              `json:"shift"`
+	Down               bool              `json:"down"`
+	X                  float64           `json:"x"`
+	Y                  float64           `json:"y"`
+	DT                 float64           `json:"dt"`
+	Value              float64           `json:"value"`
+	Group              string            `json:"group"`
+	Theme              map[string]string `json:"theme"`
 }
 
 var nativeVolume = 0.25
@@ -285,7 +287,7 @@ func nativeStatus() string {
 	}
 	return statusMessages[len(statusMessages)-1].text
 }
-func emitNativeFrame(encoder *json.Encoder, action string) error {
+func emitNativeFrame(encoder *json.Encoder, action string, timing ...*nativeFrameTiming) error {
 	if action != "tick" {
 		if replayModeActive {
 			drawReplayCurrentFrame()
@@ -335,6 +337,9 @@ func emitNativeFrame(encoder *json.Encoder, action string) error {
 		packet["error"] = nativeError
 		nativeError = ""
 	}
+	if len(timing) > 0 && timing[0] != nil {
+		return emitTimedNativeFrame(os.Stdout, packet, timing[0])
+	}
 	return encoder.Encode(packet)
 }
 func nativeMain() {
@@ -369,6 +374,7 @@ func nativeMain() {
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Buffer(make([]byte, 4096), 65536)
 	for scanner.Scan() {
+		readUs := nativeDiagnosticNowUs()
 		var c nativeCommand
 		if err := json.Unmarshal(scanner.Bytes(), &c); err != nil {
 			fmt.Fprintln(os.Stderr, "Invalid input:", err)
@@ -385,7 +391,11 @@ func nativeMain() {
 		if (c.Action == "pointer" && !c.Down) || c.Action == "relative-pointer" {
 			continue
 		}
-		if err := emitNativeFrame(encoder, c.Action); err != nil {
+		var timing *nativeFrameTiming
+		if c.DiagnosticSequence > 0 {
+			timing = &nativeFrameTiming{Sequence: c.DiagnosticSequence, SentUs: c.DiagnosticSentUs, ReadUs: readUs}
+		}
+		if err := emitNativeFrame(encoder, c.Action, timing); err != nil {
 			return
 		}
 	}

@@ -780,6 +780,9 @@ var (
 	fpsSampleElapsed      float64
 	fpsSampleFrames       int
 	fpsVisibleSamplesSeen int
+	fpsLowestElapsed      float64
+	fpsLowestFrames       int
+	fpsLowestPlaying      bool
 	fpsMiniOverlayVisible bool
 
 	loopFunc           js.Func
@@ -8876,15 +8879,38 @@ func formatLowestRenderFPS() string {
 	return fmt.Sprintf("%.1f", fpsLowest)
 }
 
-// resetLowestRenderFPS starts a fresh visible-page minimum measurement. The
-// current partial half-second sample is discarded and the normal warm-up is
-// applied again, preventing the reset keypress itself from creating a bogus low.
+// Start a fresh gameplay-only minimum, preserving the current-FPS sampler.
 func resetLowestRenderFPS() {
 	fpsLowest = 0
 	fpsVisibleSamplesSeen = 0
-	fpsSampleElapsed = 0
-	fpsSampleFrames = 0
+	fpsLowestElapsed = 0
+	fpsLowestFrames = 0
+	fpsLowestPlaying = false
 	showStatus("Lowest FPS reset", 1.5)
+}
+
+func sampleLowestRenderFPS(dt float64, playing bool) {
+	if !playing || dt <= 0 || dt >= 1 {
+		fpsLowestElapsed, fpsLowestFrames, fpsVisibleSamplesSeen = 0, 0, 0
+		fpsLowestPlaying = false
+		return
+	}
+	// The first interval may still include the title screen or paused time.
+	if !fpsLowestPlaying {
+		fpsLowestPlaying = true
+		return
+	}
+	fpsLowestElapsed += dt
+	fpsLowestFrames++
+	if fpsLowestElapsed < renderFPSSampleWindowSeconds {
+		return
+	}
+	sample := float64(fpsLowestFrames) / fpsLowestElapsed
+	if fpsVisibleSamplesSeen >= renderFPSLowestWarmupSamples && (fpsLowest == 0 || sample < fpsLowest) {
+		fpsLowest = sample
+	}
+	fpsVisibleSamplesSeen++
+	fpsLowestElapsed, fpsLowestFrames = 0, 0
 }
 
 func pageIsVisibleForFPS() bool {
@@ -10068,6 +10094,7 @@ func gameLoop(this js.Value, args []js.Value) interface{} {
 	lastTime = now
 
 	if replayModeActive {
+		sampleLowestRenderFPS(0, false)
 		updateReplayPlayback(rawDt)
 		drawReplayCurrentFrame()
 		js.Global().Call("requestAnimationFrame", loopFunc)
@@ -10075,6 +10102,7 @@ func gameLoop(this js.Value, args []js.Value) interface{} {
 	}
 
 	visibleForFPS := pageIsVisibleForFPS()
+	sampleLowestRenderFPS(rawDt, visibleForFPS && !waitingForStart && !paused && !gameOver && !levelAdvancePending && (!physicsEditorVisible || physicsEditorLiveSimulation))
 	if visibleForFPS && rawDt > 0 && rawDt < 1.0 {
 		fpsSampleElapsed += rawDt
 		fpsSampleFrames++
@@ -10085,12 +10113,6 @@ func gameLoop(this js.Value, args []js.Value) interface{} {
 			} else {
 				fpsCurrent = fpsCurrent*0.65 + sample*0.35
 			}
-
-			if fpsVisibleSamplesSeen >= renderFPSLowestWarmupSamples &&
-				(fpsLowest == 0 || sample < fpsLowest) {
-				fpsLowest = sample
-			}
-			fpsVisibleSamplesSeen++
 
 			updateDebrisAdaptiveRenderStride()
 			fpsSampleElapsed = 0
