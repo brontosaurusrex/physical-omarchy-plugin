@@ -501,7 +501,14 @@ public:
                     const qreal elapsed=last ? (now-last)/1e9 : 1./qMax(1.,refresh);
                     last=now;
                     recorder.clockTick(elapsed);
-                    if(clockEpoch.load()==epoch) emit frameTick(elapsed);
+                    if(clockEpoch.load()==epoch) {
+                        emit frameTick(elapsed);
+                        // Engine replies dirty the scene asynchronously. Keep
+                        // requesting display frames while playing so their
+                        // arrival time cannot become the clock's own cadence.
+                        // Window updates reuse unchanged item textures.
+                        if(clockEpoch.load()==epoch&&view->isVisible())view->update();
+                    }
                 },Qt::DirectConnection);
         });
 

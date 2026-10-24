@@ -7,6 +7,7 @@ __pycache__/
 /native/qmldir
 /bin/renderer-test
 /bin/frame-recorder-test
+/bin/frame-clock-test
 
 /bin/pointerlock.moc
 /bin/pointerlock.o

@@ -19,6 +19,12 @@ bar foreground when closed and the bar's active color while the game window is
 open. The scoped shell's `isPluginOpen` API supplies that state; a paused engine
 retained after closing does not keep the icon highlighted.
 
+While gameplay is animated, the game window requests its next display frame
+from its own Qt frame callback. Engine replies update the scene asynchronously;
+their arrival does not control the display clock. Requests to the engine remain
+bounded to two outstanding ticks. Window redraws reuse unchanged item textures,
+and the continuous requests stop when the game pauses or closes.
+
 ## CPU versus GPU
 
 The **CPU** computes ball movement, collisions, effects and game state. It also
