@@ -25,6 +25,7 @@ go vet -buildvcs=false ./...
 python3 "$project_dir/tests/audio_assets.py"
 python3 "$project_dir/tests/engine_test.py"
 python3 "$project_dir/tests/auto_demo.py"
+python3 "$project_dir/tests/brick_flip.py"
 python3 "$project_dir/tests/frame_diagnostics.py"
 python3 "$project_dir/tests/qml_smoke.py"
 python3 "$project_dir/tests/level_complete.py"

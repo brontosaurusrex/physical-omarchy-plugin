@@ -4119,6 +4119,7 @@ func resolveCollisionDebug(
 
 // ---- Build bricks from level layout (with auto-scaling) ----
 func buildBricksFromLevel(lvl levelData, levelIndex int) {
+	bricksVerticalFlipped = false
 	bricks = nil
 	brickGrid = make(map[int][]int)
 	brickGridCells = nil
@@ -4214,6 +4215,7 @@ func buildBricksFromLevel(lvl levelData, levelIndex int) {
 
 // ---- Fallback default bricks (also scaled) ----
 func initBricksDefault(levelIndex int) {
+	bricksVerticalFlipped = false
 	bricks = nil
 	brickGrid = make(map[int][]int)
 	brickGridCells = nil
@@ -9483,8 +9485,16 @@ func refreshPhysicsEditorControls() {
 }
 
 func recomputeBrickTilts() {
+	first, last, _ := brickVerticalBounds()
 	for i := range bricks {
-		bricks[i].tiltRadians = brickMicroTiltRadians(currentLevelIndex, bricks[i].row, bricks[i].col)
+		row := bricks[i].row
+		if bricksVerticalFlipped {
+			row = first + last - row
+		}
+		bricks[i].tiltRadians = brickMicroTiltRadians(currentLevelIndex, row, bricks[i].col)
+		if bricksVerticalFlipped {
+			bricks[i].tiltRadians = -bricks[i].tiltRadians
+		}
 	}
 	bricksDirty = true
 }
@@ -10714,6 +10724,11 @@ func setupInput() {
 			return nil
 		}
 		if physicsEditorVisible {
+			return nil
+		}
+
+		if (key == "y" || key == "Y") && !e.Get("repeat").Bool() {
+			flipBricksVertically()
 			return nil
 		}
 

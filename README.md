@@ -33,6 +33,15 @@ Extract the Omarchy bundle, enter its folder and run:
 No Go or C++ compiler is needed. For the standalone bundle, run `./install`
 after extraction, or `./bin/physical` to run it directly.
 
+## Flip the brick layout
+
+Press **Y** to flip the current level's brick rows top-to-bottom within their
+existing area. Press it again to restore the orientation. The ball, paddle,
+score, lives and level settings stay unchanged; destroyed bricks stay destroyed.
+Each new level starts in its original orientation. Flipped runs are assisted
+and do not replace unassisted records. Replay and SVG export retain the layout
+shown at each recorded moment.
+
 ## Continuous demo
 
 Press **O** or use **Demo** in the menu to toggle assisted auto paddle. Demo mode

@@ -40,6 +40,8 @@ ShellRoot {
     function same(field) { return game.state[field] === before[field]; }
     function changed(field) { return !same(field); }
     function buildCases() { cases = [
+        {name:"Ready brick flip", run:()=>tap(Qt.Key_Y), check:()=>game.state.flipped && same("x") && same("y") && same("paddleX") && same("lives") && same("score") && game.state.ready},
+        {name:"Ready brick restore", run:()=>tap(Qt.Key_Y), check:()=>!game.state.flipped && same("x") && same("y") && game.state.ready},
         {name:"Ready sound", run:()=>tap(Qt.Key_S), check:()=>changed("sound")},
         {name:"Ready debris", run:()=>tap(Qt.Key_R), check:()=>changed("debrisMaster")},
         {name:"Enter start", run:()=>tap(Qt.Key_Return), check:()=>!game.state.ready && !game.state.paused, finish:()=>game.send({action:"pointer",x:game.gameView.gameWidth/2,y:game.gameView.gameHeight/2})},

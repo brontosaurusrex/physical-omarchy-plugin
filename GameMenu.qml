@@ -31,6 +31,7 @@ Rectangle {
         ]},
         {title: "Extras", rows: [
             ["O", "Continuous demo / auto paddle (assisted)"],
+            ["Y", "Flip brick rows vertically (assisted)"],
             ["R", "Toggle debris"],
             ["M", "Toggle magnets (assisted)"],
             ["Z", "Toggle zapper (assisted)"],

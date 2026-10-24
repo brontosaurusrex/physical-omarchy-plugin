@@ -38,6 +38,7 @@ type replayFrame struct {
 	blackHoleActive        bool
 	zapperActive           bool
 	drawBrickTilt          bool
+	bricksFlipped          bool
 
 	lives int32
 	score int32
@@ -64,10 +65,11 @@ type replayDebrisShape struct {
 }
 
 var (
-	replayFrames       []replayFrame
-	replayBrickDefs    []replayBrickDef
-	replayDebrisShapes map[uint32]replayDebrisShape
-	replayLevelIndex   int
+	replayFrames         []replayFrame
+	replayBrickDefs      []replayBrickDef
+	replayBrickMirrorSum float32
+	replayDebrisShapes   map[uint32]replayDebrisShape
+	replayLevelIndex     int
 
 	replayRecording          bool
 	replayRecordingFinished  bool
@@ -92,6 +94,7 @@ var (
 type replayBrickCacheSettings struct {
 	width, height, radius float64
 	tilt                  bool
+	flipped               bool
 	colors                [6]string
 }
 
@@ -131,6 +134,12 @@ func beginReplayRecording(levelIndex int) {
 	replayPlaybackSpeed = 1
 	replayPlaybackAccum = 0
 
+	rememberReplayBrickDefs()
+}
+
+func rememberReplayBrickDefs() {
+	_, _, mirrorSum := brickVerticalBounds()
+	replayBrickMirrorSum = float32(mirrorSum)
 	replayBrickDefs = make([]replayBrickDef, len(bricks))
 	for i := range bricks {
 		br := &bricks[i]
@@ -138,7 +147,20 @@ func beginReplayRecording(levelIndex int) {
 			x: float32(br.x), y: float32(br.y), w: float32(br.w), h: float32(br.h),
 			tilt: float32(br.tiltRadians), magic: br.magic, unbreakable: br.unbreakable,
 		}
+		if bricksVerticalFlipped {
+			replayBrickDefs[i].y = replayBrickMirrorSum - replayBrickDefs[i].y - replayBrickDefs[i].h
+			replayBrickDefs[i].tilt = -replayBrickDefs[i].tilt
+		}
 	}
+}
+
+func replayBrickAt(frame *replayFrame, index int) replayBrickDef {
+	def := replayBrickDefs[index]
+	if frame.bricksFlipped {
+		def.y = replayBrickMirrorSum - def.y - def.h
+		def.tilt = -def.tilt
+	}
+	return def
 }
 
 func ensureReplayDebrisShape(fragment *debrisFragment) {
@@ -181,6 +203,7 @@ func captureReplayFrameState(interpolate bool) replayFrame {
 		blackHoleActive: blackHoleActive,
 		zapperActive:    zapperIsActive(),
 		drawBrickTilt:   physicsConfig.drawBrickTilt,
+		bricksFlipped:   bricksVerticalFlipped,
 		lives:           int32(lives),
 		score:           int32(score),
 	}
@@ -523,18 +546,20 @@ func drawReplayBricks(frame *replayFrame) {
 	}
 	style := replayBrickCacheSettings{
 		width: canvasWidth, height: canvasHeight, radius: brickRadius,
-		tilt:   frame.drawBrickTilt,
-		colors: [6]string{palette[2], brickStrokeColor, magicColor, magicStrokeColor, palette[6], unbreakableStrokeColor},
+		tilt:    frame.drawBrickTilt,
+		flipped: frame.bricksFlipped,
+		colors:  [6]string{palette[2], brickStrokeColor, magicColor, magicStrokeColor, palette[6], unbreakableStrokeColor},
 	}
 	if !replayBrickCacheValid || style != replayBrickCacheStyle || !slices.Equal(frame.brickAlive, replayBrickCacheAlive) {
 		replayBrickCanvas.Set("width", int(canvasWidth))
 		replayBrickCanvas.Set("height", int(canvasHeight))
 		replayBrickCtx.Call("clearRect", 0, 0, canvasWidth, canvasHeight)
 		data := make([]float64, 0, len(replayBrickDefs)*6)
-		for i, def := range replayBrickDefs {
+		for i := range replayBrickDefs {
 			if !replayBrickIsAlive(frame, i) {
 				continue
 			}
+			def := replayBrickAt(frame, i)
 			flags := 0.0
 			if def.magic {
 				flags = 1
@@ -644,7 +669,7 @@ func drawReplayZapperBolts(frame *replayFrame) {
 		if target < 0 || target >= len(replayBrickDefs) || !replayBrickIsAlive(frame, target) || replayBrickDefs[target].unbreakable {
 			continue
 		}
-		def := replayBrickDefs[target]
+		def := replayBrickAt(frame, target)
 		color := "#e8fbff"
 		if i%2 == 1 {
 			color = "#f3e8ff"
@@ -888,10 +913,11 @@ func appendSVGBricks(builder *strings.Builder, frame *replayFrame) {
 	if frame == nil {
 		return
 	}
-	for i, def := range replayBrickDefs {
+	for i := range replayBrickDefs {
 		if !replayBrickIsAlive(frame, i) {
 			continue
 		}
+		def := replayBrickAt(frame, i)
 		fill, stroke, width := replayBrickStyle(def)
 		cx := float64(def.x + def.w/2)
 		cy := float64(def.y + def.h/2)
@@ -1058,7 +1084,7 @@ func appendSVGZapper(builder *strings.Builder, frame *replayFrame) {
 		if target < 0 || target >= len(replayBrickDefs) || !replayBrickIsAlive(frame, target) || replayBrickDefs[target].unbreakable {
 			continue
 		}
-		def := replayBrickDefs[target]
+		def := replayBrickAt(frame, target)
 		color, shadowColor := "#e8fbff", "#58d9ff"
 		if i%2 == 1 {
 			color, shadowColor = "#f3e8ff", "#b56cff"
@@ -1283,11 +1309,7 @@ func exportCurrentFrameSVG() {
 		frameNumber = replayFrameIndex
 	} else {
 		if len(replayBrickDefs) == 0 && len(bricks) > 0 {
-			replayBrickDefs = make([]replayBrickDef, len(bricks))
-			for i := range bricks {
-				br := &bricks[i]
-				replayBrickDefs[i] = replayBrickDef{x: float32(br.x), y: float32(br.y), w: float32(br.w), h: float32(br.h), tilt: float32(br.tiltRadians), magic: br.magic, unbreakable: br.unbreakable}
-			}
+			rememberReplayBrickDefs()
 		}
 		if replayDebrisShapes == nil {
 			replayDebrisShapes = make(map[uint32]replayDebrisShape)
@@ -1318,11 +1340,7 @@ func exportCurrentFrameTrailSVG() {
 		historyEnd = replayFrameIndex - 1
 	} else {
 		if len(replayBrickDefs) == 0 && len(bricks) > 0 {
-			replayBrickDefs = make([]replayBrickDef, len(bricks))
-			for i := range bricks {
-				br := &bricks[i]
-				replayBrickDefs[i] = replayBrickDef{x: float32(br.x), y: float32(br.y), w: float32(br.w), h: float32(br.h), tilt: float32(br.tiltRadians), magic: br.magic, unbreakable: br.unbreakable}
-			}
+			rememberReplayBrickDefs()
 		}
 		if replayDebrisShapes == nil {
 			replayDebrisShapes = make(map[uint32]replayDebrisShape)
