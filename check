@@ -5,6 +5,8 @@ project_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 omarchy plugin validate "$project_dir"
 g++ -O2 -std=c++17 -fPIC "$project_dir/tests/frame_recorder_test.cpp" $(pkg-config --cflags --libs Qt6Core) -o "$project_dir/bin/frame-recorder-test"
 "$project_dir/bin/frame-recorder-test"
+g++ -O2 -std=c++17 -fPIC "$project_dir/tests/process_write_test.cpp" -I"$project_dir/bin" $(pkg-config --cflags --libs Qt6Core Qt6Gui) -o "$project_dir/bin/process-write-test"
+PHYSICAL_FRAME_DIAGNOSTICS=0 QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME= "$project_dir/bin/process-write-test"
 bash -n "$project_dir/build" "$project_dir/install" "$project_dir/check" "$project_dir/physical-window" "$project_dir/packaging/install-standalone" "$project_dir/packaging/uninstall-standalone"
 g++ -O2 -std=c++17 -fPIC "$project_dir/tests/renderer_test.cpp" "$project_dir/bin/pointerlock.o" "$project_dir/bin/protocols/"*.o -I"$project_dir/bin" $(pkg-config --cflags --libs Qt6Quick Qt6Qml Qt6Gui Qt6Multimedia wayland-client) -o "$project_dir/bin/renderer-test"
 QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME= "$project_dir/bin/renderer-test"
@@ -22,6 +24,7 @@ go test -buildvcs=false ./...
 go vet -buildvcs=false ./...
 python3 "$project_dir/tests/audio_assets.py"
 python3 "$project_dir/tests/engine_test.py"
+python3 "$project_dir/tests/auto_demo.py"
 python3 "$project_dir/tests/frame_diagnostics.py"
 python3 "$project_dir/tests/qml_smoke.py"
 python3 "$project_dir/tests/level_complete.py"

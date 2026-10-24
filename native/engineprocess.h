@@ -18,6 +18,14 @@ class EngineProcess : public QObject {
     qint64 sequence=0,acknowledged=0,receivedUs=0,peakBytes=0,peakCommands=0,peakMouse=0;
     std::deque<qint64> mouseCommands;
     qint64 mouseOverflow=0;
+    void writeCommand(const QByteArray &bytes) {
+        process.write(bytes);
+        if(diagnostics)peakBytes=qMax(peakBytes,process.bytesToWrite());
+        // QProcess otherwise leaves this to a writable-socket event. A tick
+        // sent just before Qt's render synchronization would wait behind it.
+        // Flush ready pipe data now, without waiting if the engine is busy.
+        if(process.bytesToWrite()>0)process.waitForBytesWritten(0);
+    }
     void readLines(QByteArray &pending, const QByteArray &bytes, bool standardError) {
         pending += bytes;
         if (pending.size() > 4 * 1024 * 1024) {
@@ -62,15 +70,14 @@ public:
     }
     Q_INVOKABLE void write(const QString &line) {
         if(!running())return;
-        if(!diagnostics){process.write(line.toUtf8());return;}
+        if(!diagnostics){writeCommand(line.toUtf8());return;}
         auto command=QJsonDocument::fromJson(line.toUtf8()).object();
         command["_diag_seq"]=++sequence;command["_diag_sent_us"]=frameDiagnosticNowUs();
         const auto action=command["action"].toString();
         if(action=="relative-pointer"||action=="pointer") {
             if(mouseCommands.size()<4096)mouseCommands.push_back(sequence);else ++mouseOverflow;
         }
-        process.write(QJsonDocument(command).toJson(QJsonDocument::Compact)+'\n');
-        peakBytes=qMax(peakBytes,process.bytesToWrite());
+        writeCommand(QJsonDocument(command).toJson(QJsonDocument::Compact)+'\n');
         peakCommands=qMax(peakCommands,sequence-acknowledged);
         peakMouse=qMax(peakMouse,qint64(mouseCommands.size()));
     }

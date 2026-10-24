@@ -60,6 +60,9 @@ const (
 	renderFPSSampleWindowSeconds = 0.5
 	renderFPSLowestWarmupSamples = 2
 
+	// Leave results visible briefly before the unattended demo continues.
+	autoDemoTransitionSeconds = 2.0
+
 	// Default geometry and gameplay.
 	defaultCanvasWidth    = 1800.0
 	defaultCanvasHeight   = 900.0

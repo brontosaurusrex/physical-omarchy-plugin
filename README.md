@@ -33,6 +33,15 @@ Extract the Omarchy bundle, enter its folder and run:
 No Go or C++ compiler is needed. For the standalone bundle, run `./install`
 after extraction, or `./bin/physical` to run it directly.
 
+## Continuous demo
+
+Press **O** or use **Demo** in the menu to toggle assisted auto paddle. Demo mode
+advances after each completed level, starts a fresh game after losing or winning,
+and skips level 14. Results remain visible for two seconds before continuing.
+Pause, replay and the editor still stop automatic progression. Turning demo off
+restores manual progression, including level 14. Demo runs do not qualify for
+unassisted records.
+
 ## Catching intermittent FPS drops
 
 The FPS overlay's lowest value measures active gameplay, excluding level title

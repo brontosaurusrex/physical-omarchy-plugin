@@ -25,6 +25,12 @@ their arrival does not control the display clock. Requests to the engine remain
 bounded to two outstanding ticks. Window redraws reuse unchanged item textures,
 and the continuous requests stop when the game pauses or closes.
 
+Commands are flushed to the engine pipe without blocking before returning to
+Qt's render synchronization. Otherwise QProcess can defer the write until the
+GUI thread handles its writable-socket notification, delaying work intended for
+the next frame. A full pipe retains its buffered data for normal asynchronous
+delivery.
+
 ## CPU versus GPU
 
 The **CPU** computes ball movement, collisions, effects and game state. It also

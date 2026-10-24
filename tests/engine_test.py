@@ -85,6 +85,7 @@ with tempfile.TemporaryDirectory(prefix="physical-native-test-") as directory:
     send("setting", group="physics", key="gravity", value=300)
     assert "gravity=300" in send("tuner-export")["clipboard"]
     assert not key("e")["state"]["editor"]
+    if frame["state"]["auto"]: key("o")
     key("u")
     for expected in range(2, 34):
         selected = key("PageDown")

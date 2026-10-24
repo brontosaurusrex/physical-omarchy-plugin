@@ -4998,6 +4998,10 @@ func loadSavedLevel() int {
 
 // ---- Start a level ----
 func startLevel(index int) {
+	if autoPaddleEnabled && index == 13 {
+		index++ // Level 14 is omitted only from demo play.
+	}
+	autoDemoWait = 0
 	stopAllMagicFeatureVoices()
 	if index >= len(levels) {
 		gameOver = true
@@ -7847,6 +7851,7 @@ func refreshAutoPaddleControl() {
 
 func setAutoPaddleEnabled(enabled bool, announce bool) {
 	autoPaddleEnabled = enabled
+	autoDemoWait = 0
 	if enabled {
 		markLevelRunAssisted()
 	}
@@ -7854,6 +7859,9 @@ func setAutoPaddleEnabled(enabled bool, announce bool) {
 	if enabled && waitingForStart && !gameOver {
 		waitingForStart = false
 		paused = false
+	}
+	if enabled && (levelAdvancePending || gameOver) {
+		paused = false // Enabling demo on a result screen starts its countdown.
 	}
 	leftPressed = false
 	rightPressed = false
@@ -7867,9 +7875,9 @@ func setAutoPaddleEnabled(enabled bool, announce bool) {
 	refreshAutoPaddleControl()
 	if announce {
 		if enabled {
-			showStatus("Auto paddle ON", 2.0)
+			showStatus("Auto paddle / demo ON", 2.0)
 		} else {
-			showStatus("Auto paddle OFF", 2.0)
+			showStatus("Auto paddle / demo OFF", 2.0)
 		}
 	}
 }
@@ -7880,6 +7888,9 @@ func toggleAutoPaddle() {
 
 // ---- Update (main loop) ----
 func update(dt float64) {
+	if updateAutoDemo(dt) {
+		return
+	}
 	if gameOver || paused || waitingForStart {
 		resetPaddleSpinHistory()
 		return
@@ -10763,7 +10774,11 @@ func setupInput() {
 		if pageUpPressed && !e.Get("repeat").Bool() {
 			limit := activeUnlockedLimit()
 			if currentLevelIndex > 0 {
-				jumpToLevel(currentLevelIndex - 1)
+				previous := currentLevelIndex - 1
+				if autoPaddleEnabled && previous == 13 {
+					previous--
+				}
+				jumpToLevel(previous)
 			} else if limit > 0 {
 				jumpToLevel(limit)
 			}

@@ -30,7 +30,7 @@ Rectangle {
             ["Q", "Close game (outside lab)"]
         ]},
         {title: "Extras", rows: [
-            ["O", "Automatic paddle (assisted)"],
+            ["O", "Continuous demo / auto paddle (assisted)"],
             ["R", "Toggle debris"],
             ["M", "Toggle magnets (assisted)"],
             ["Z", "Toggle zapper (assisted)"],
@@ -122,7 +122,7 @@ Rectangle {
             }
             RowLayout {
                 GameButton { objectName: "toggle-debris"; enabled: !root.controller.state.replay; text: "Debris"; selected: root.controller.state.debrisMaster === true; onClicked: root.controller.shortcut("r", "KeyR"); }
-                GameButton { objectName: "toggle-auto"; enabled: !root.controller.state.replay; text: "Auto"; selected: root.controller.state.auto === true; onClicked: root.controller.shortcut("o", "KeyO"); }
+                GameButton { objectName: "toggle-auto"; enabled: !root.controller.state.replay; text: "Demo"; selected: root.controller.state.auto === true; onClicked: root.controller.shortcut("o", "KeyO"); }
                 GameButton { objectName: "toggle-lab"; enabled: !root.controller.state.replay; text: "Lab"; selected: root.controller.state.editor === true; onClicked: root.key("e", "KeyE"); }
             }
             RowLayout {
