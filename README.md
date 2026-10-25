@@ -36,11 +36,32 @@ after extraction, or `./bin/physical` to run it directly.
 ## Flip the brick layout
 
 Press **Y** to flip the current level's brick rows top-to-bottom within their
-existing area. Press it again to restore the orientation. The ball, paddle,
-score, lives and level settings stay unchanged; destroyed bricks stay destroyed.
-Each new level starts in its original orientation. Flipped runs are assisted
+existing area. A screen wipe switches whole bricks along each row from left to
+right. Press Y again to restore the layout with a right-to-left wipe. Bricks
+keep their shape throughout the transition.
+Destroyed bricks stay destroyed; the ball and paddle keep playing during the wipe.
+Each new level starts in its original orientation. Manual Y flips are assisted
 and do not replace unassisted records. Replay and SVG export retain the layout
 shown at each recorded moment.
+
+## Game speed and brick flips
+
+Keys **6 / 7 / 8 / 9 / 0** select **80 / 90 / 100 / 150 / 200%** game speed.
+The status display confirms changes as `@80%`, for example. The last selection
+is saved and carries through levels, retries, demo restarts and reopening.
+The physics step stays fixed; simulation time advances at the selected pace.
+
+Each speed has separate level and full-game records. Existing records remain
+the 100% records. Results show the run's speed; completion times account for the
+selected pace and exclude READY, pause and result screens.
+Changing speed during a level produces a mixed-speed result without updating
+fixed-speed records. A full-game run must keep one speed throughout to qualify.
+
+Brick flips are disabled as magic-brick rewards in normal play. Manual **Y**
+remains available and marks the run assisted.
+The optional power-up code is retained: custom levels can opt in with
+`enableBrickFlip=true`. It uses the same wipe as Y and returns after the normal
+`powerUpDuration` (10 seconds by default); another pickup refreshes the timer.
 
 ## Continuous demo
 

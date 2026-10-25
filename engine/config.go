@@ -330,6 +330,7 @@ const (
 	defaultEnableZapper           = false
 	defaultEnableBreakUnbreakable = true
 	defaultEnableBigPaddle        = true
+	defaultEnableBrickFlip        = false
 
 	showBlackHole = false // false
 

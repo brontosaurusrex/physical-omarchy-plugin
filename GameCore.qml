@@ -102,7 +102,7 @@ Item {
     readonly property var theme: ({ background: String(Color.background), foreground: String(Color.foreground), accent: String(Color.accent), urgent: String(Color.urgent), muted: String(Color.muted) })
     // The original engine keeps debris moving behind the completion table.
     // Use the display clock until it disappears, then return to idle polling.
-    readonly property bool animating: opened && engineReady && !menuVisible && ((!state.paused && !state.ready && !state.gameOver && (!state.complete || state.debrisPieces > 0) && (!state.editor || state.live)) || (state.replay && state.replayDirection !== 0))
+    readonly property bool animating: opened && engineReady && !menuVisible && ((!state.paused && !state.ready && !state.gameOver && (!state.complete || state.debrisPieces > 0) && (!state.editor || state.live)) || (!state.replay && state.flipAnimating === true) || (state.replay && state.replayDirection !== 0))
     onAnimatingChanged: pendingFrameTime = 0
 
     function send(data) {
@@ -319,7 +319,7 @@ Item {
                 anchors.top: parent.top
                 anchors.right: parent.right
                 anchors.margins: 12
-                width: Math.min(Style.space(360), parent.width - 24)
+                width: Math.min(Style.space(440), parent.width - 24)
                 height: Math.min(implicitHeight, parent.height - 24)
                 visible: root.menuVisible
                 controller: root

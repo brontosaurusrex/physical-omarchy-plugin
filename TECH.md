@@ -86,6 +86,31 @@ period, excluding time spent idle. It does not change the 240 Hz physics steps.
 Hidden windows stop requesting frames. A faster GPU can improve drawing, but
 CPU work, packet processing, driver overhead and display refresh also limit FPS.
 
+Game pace scales the elapsed time supplied to the fixed-step accumulator by
+80-200%, while each physics step remains 1/240 second of simulation time. FPS
+sampling and render scheduling retain their real frame intervals. The selected
+pace is saved as a preference and is not reset by levels, retries or demo loops.
+Completion time compensates for the pace multiplier. Record keys are separated
+by speed; 100% retains the legacy keys. Mixed-speed levels and full-game attempts
+show results but cannot update fixed-speed records.
+Saved 110%/120% preferences migrate to 150%/200%; their old record tables stay
+at the original speeds rather than becoming records for the new speeds.
+
+Magic brick flips are disabled by default; their optional implementation remains
+available to custom levels via `enableBrickFlip=true`. Earned flips are queued
+until the end of a fixed step so that ball contacts are resolved against the
+geometry used to find them. A left-to-right screen wipe
+switches whole bricks along every row between their original and mirrored
+positions; the return travels right to left. Bricks retain their full dimensions
+and switch positions when the front passes their centers. Collision/debris
+lookup grids update with each crossed column. Replay stores the wipe progress,
+direction and target layout so partial transitions reproduce the live geometry.
+The same animation runs for manual Y and earned flips, including while READY
+or paused. An earned flip returns after `powerUpDuration` of active simulation
+time, starting after its opening wipe; another pickup refreshes the timer.
+Manual Y sets the persistent base orientation and remains assisted. The temporary
+power-up reverses that base orientation and retains normal record eligibility.
+
 ## GPU compatibility
 
 There is no Intel-specific code: Intel, AMD and NVIDIA GPUs should work when

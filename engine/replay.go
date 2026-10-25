@@ -39,6 +39,9 @@ type replayFrame struct {
 	zapperActive           bool
 	drawBrickTilt          bool
 	bricksFlipped          bool
+	brickWipePhase         float32
+	brickWipeTarget        bool
+	brickWipeReverse       bool
 
 	lives int32
 	score int32
@@ -65,11 +68,12 @@ type replayDebrisShape struct {
 }
 
 var (
-	replayFrames         []replayFrame
-	replayBrickDefs      []replayBrickDef
-	replayBrickMirrorSum float32
-	replayDebrisShapes   map[uint32]replayDebrisShape
-	replayLevelIndex     int
+	replayFrames          []replayFrame
+	replayBrickDefs       []replayBrickDef
+	replayBrickMirrorSum  float32
+	replayBrickWipeBounds brickWipeBounds
+	replayDebrisShapes    map[uint32]replayDebrisShape
+	replayLevelIndex      int
 
 	replayRecording          bool
 	replayRecordingFinished  bool
@@ -95,6 +99,9 @@ type replayBrickCacheSettings struct {
 	width, height, radius float64
 	tilt                  bool
 	flipped               bool
+	wipePhase             float32
+	wipeTarget            bool
+	wipeReverse           bool
 	colors                [6]string
 }
 
@@ -151,12 +158,19 @@ func rememberReplayBrickDefs() {
 			replayBrickDefs[i].y = replayBrickMirrorSum - replayBrickDefs[i].y - replayBrickDefs[i].h
 			replayBrickDefs[i].tilt = -replayBrickDefs[i].tilt
 		}
+		def := replayBrickDefs[i]
+		if i == 0 {
+			replayBrickWipeBounds = brickWipeBounds{float64(def.x), float64(def.x + def.w)}
+		}
+		replayBrickWipeBounds.left = math.Min(replayBrickWipeBounds.left, float64(def.x))
+		replayBrickWipeBounds.right = math.Max(replayBrickWipeBounds.right, float64(def.x+def.w))
 	}
 }
 
 func replayBrickAt(frame *replayFrame, index int) replayBrickDef {
 	def := replayBrickDefs[index]
-	if frame.bricksFlipped {
+	if brickFlipAtWipe(frame.bricksFlipped, frame.brickWipeTarget, frame.brickWipePhase,
+		frame.brickWipeReverse, float64(def.x), float64(def.w), replayBrickWipeBounds) {
 		def.y = replayBrickMirrorSum - def.y - def.h
 		def.tilt = -def.tilt
 	}
@@ -193,19 +207,22 @@ func ensureReplayDebrisShape(fragment *debrisFragment) {
 
 func captureReplayFrameState(interpolate bool) replayFrame {
 	frame := replayFrame{
-		timeSeconds:     float32(levelRunStats.elapsedSeconds),
-		paddleX:         float32(paddle.x),
-		paddleY:         float32(paddle.y),
-		paddleW:         float32(paddle.w),
-		paddleH:         float32(paddle.h),
-		blackHoleX:      float32(blackHoleX),
-		blackHoleY:      float32(blackHoleY),
-		blackHoleActive: blackHoleActive,
-		zapperActive:    zapperIsActive(),
-		drawBrickTilt:   physicsConfig.drawBrickTilt,
-		bricksFlipped:   bricksVerticalFlipped,
-		lives:           int32(lives),
-		score:           int32(score),
+		timeSeconds:      float32(levelRunStats.elapsedSeconds),
+		paddleX:          float32(paddle.x),
+		paddleY:          float32(paddle.y),
+		paddleW:          float32(paddle.w),
+		paddleH:          float32(paddle.h),
+		blackHoleX:       float32(blackHoleX),
+		blackHoleY:       float32(blackHoleY),
+		blackHoleActive:  blackHoleActive,
+		zapperActive:     zapperIsActive(),
+		drawBrickTilt:    physicsConfig.drawBrickTilt,
+		bricksFlipped:    bricksVerticalFlipped,
+		brickWipePhase:   currentBrickWipePhase(),
+		brickWipeTarget:  brickFlipAnimation.target,
+		brickWipeReverse: brickFlipAnimation.reverse,
+		lives:            int32(lives),
+		score:            int32(score),
 	}
 
 	var renderState renderSnapshot
@@ -546,9 +563,12 @@ func drawReplayBricks(frame *replayFrame) {
 	}
 	style := replayBrickCacheSettings{
 		width: canvasWidth, height: canvasHeight, radius: brickRadius,
-		tilt:    frame.drawBrickTilt,
-		flipped: frame.bricksFlipped,
-		colors:  [6]string{palette[2], brickStrokeColor, magicColor, magicStrokeColor, palette[6], unbreakableStrokeColor},
+		tilt:        frame.drawBrickTilt,
+		flipped:     frame.bricksFlipped,
+		wipePhase:   frame.brickWipePhase,
+		wipeTarget:  frame.brickWipeTarget,
+		wipeReverse: frame.brickWipeReverse,
+		colors:      [6]string{palette[2], brickStrokeColor, magicColor, magicStrokeColor, palette[6], unbreakableStrokeColor},
 	}
 	if !replayBrickCacheValid || style != replayBrickCacheStyle || !slices.Equal(frame.brickAlive, replayBrickCacheAlive) {
 		replayBrickCanvas.Set("width", int(canvasWidth))

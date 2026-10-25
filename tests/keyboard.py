@@ -40,8 +40,13 @@ ShellRoot {
     function same(field) { return game.state[field] === before[field]; }
     function changed(field) { return !same(field); }
     function buildCases() { cases = [
-        {name:"Ready brick flip", run:()=>tap(Qt.Key_Y), check:()=>game.state.flipped && same("x") && same("y") && same("paddleX") && same("lives") && same("score") && game.state.ready},
-        {name:"Ready brick restore", run:()=>tap(Qt.Key_Y), check:()=>!game.state.flipped && same("x") && same("y") && game.state.ready},
+        {name:"Speed 80", run:()=>tap(Qt.Key_6), check:()=>game.state.gameSpeed===80 && game.state.status==="@80%" && game.state.ready},
+        {name:"Speed 90", run:()=>tap(Qt.Key_7), check:()=>game.state.gameSpeed===90 && game.state.ready},
+        {name:"Speed 150", run:()=>tap(Qt.Key_9), check:()=>game.state.gameSpeed===150 && game.state.ready},
+        {name:"Speed 200", run:()=>tap(Qt.Key_0), check:()=>game.state.gameSpeed===200 && game.state.ready},
+        {name:"Speed 100", run:()=>tap(Qt.Key_8), check:()=>game.state.gameSpeed===100 && game.state.ready},
+        {name:"Ready brick flip", run:()=>tap(Qt.Key_Y), wait:()=>game.state.flipAnimating, check:()=>game.state.flipped && same("x") && same("y") && same("paddleX") && same("lives") && same("score") && game.state.ready},
+        {name:"Ready brick restore", run:()=>tap(Qt.Key_Y), wait:()=>game.state.flipAnimating, check:()=>!game.state.flipped && same("x") && same("y") && game.state.ready},
         {name:"Ready sound", run:()=>tap(Qt.Key_S), check:()=>changed("sound")},
         {name:"Ready debris", run:()=>tap(Qt.Key_R), check:()=>changed("debrisMaster")},
         {name:"Enter start", run:()=>tap(Qt.Key_Return), check:()=>!game.state.ready && !game.state.paused, finish:()=>game.send({action:"pointer",x:game.gameView.gameWidth/2,y:game.gameView.gameHeight/2})},
@@ -110,6 +115,7 @@ ShellRoot {
         if(root.step>=root.cases.length) { console.log("KEYBOARD PASS:",root.cases.length,"keyboard checks through Qt input"); Qt.exit(0); return; }
         var test=root.cases[root.step];
         if(!root.sent) { root.before=JSON.parse(JSON.stringify(game.state)); test.run(); root.sent=true; return; }
+        if(test.wait && test.wait()) return;
         if(!test.check()) { console.error("KEYBOARD FAILED",test.name,JSON.stringify(game.state)); Qt.exit(1); return; }
         if(test.finish) test.finish();
         console.log("KEYBOARD OK",test.name);

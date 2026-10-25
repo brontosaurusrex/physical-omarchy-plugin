@@ -22,6 +22,11 @@ Rectangle {
             ["Enter", "Start, retry / continue"],
             ["Left click", "Start, retry / continue"],
             ["Space + F", "Toggle fullscreen"],
+            ["6", "Game speed: 80%"],
+            ["7", "Game speed: 90%"],
+            ["8", "Game speed: 100%"],
+            ["9", "Game speed: 150%"],
+            ["0", "Game speed: 200%"],
             ["Page Up", "Previous unlocked level"],
             ["Page Down", "Next unlocked level"],
             ["S", "Toggle sound"],
@@ -79,7 +84,17 @@ Rectangle {
                 Text { text: "PHYSICAL"; color: Color.accent; font.family: Style.fontFamily; font.pixelSize: Style.font.heading; Layout.fillWidth: true; }
                 GameButton { text: "×"; onClicked: root.controller.closeMenu(); }
             }
-            Text { text: "Level " + root.controller.state.level + " / " + root.controller.state.levels; color: Color.muted; font.family: Style.fontFamily; font.pixelSize: Style.font.body; }
+            Text { text: "Level " + root.controller.state.level + " / " + root.controller.state.levels + " · Game speed " + (root.controller.state.gameSpeed || 100) + "%"; color: Color.muted; font.family: Style.fontFamily; font.pixelSize: Style.font.body; }
+            Text {
+                objectName: "game-speed-shortcuts"
+                Layout.fillWidth: true
+                text: "Game speed keys\n6 = 80% · 7 = 90% · 8 = 100%\n9 = 150% · 0 = 200%"
+                textFormat: Text.PlainText
+                color: Color.foreground
+                font.family: Style.fontFamily
+                font.pixelSize: Style.font.body
+                wrapMode: Text.WordWrap
+            }
             Text {
                 objectName: "mouse-capture-hint"
                 Layout.fillWidth: true
@@ -151,7 +166,7 @@ Rectangle {
                                 spacing: Style.space(12)
                                 Text {
                                     text: modelData[0]
-                                    Layout.preferredWidth: Math.min(Style.space(120), root.width * 0.35)
+                                    Layout.preferredWidth: Math.min(Style.space(105), root.width * 0.30)
                                     Layout.alignment: Qt.AlignTop
                                     color: Color.foreground
                                     font.family: Style.fontFamily

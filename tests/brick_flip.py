@@ -33,6 +33,13 @@ with tempfile.TemporaryDirectory(prefix="physical-brick-flip-") as directory:
     def key(value, **values):
         return send("key", key=value, down=True, **values)
 
+    def finish_flip(packet):
+        for _ in range(180):
+            if not packet["state"]["flipAnimating"]:
+                return packet
+            packet = send("tick", dt=1/60)
+        raise AssertionError("Brick wipe did not finish")
+
     def batch(packet):
         return packet["_brick_batch"]
 
@@ -57,11 +64,11 @@ with tempfile.TemporaryDirectory(prefix="physical-brick-flip-") as directory:
         for level in range(1, frame["state"]["levels"] + 1):
             assert frame["state"]["level"] == level and not frame["state"]["flipped"]
             original = batch(frame)
-            flipped = key("y")
+            flipped = finish_flip(key("y"))
             assert flipped["state"]["flipped"]
             check_flip(frame, flipped)
             assert key("y", repeat=True)["state"]["flipped"], "Key repeat toggled the layout"
-            restored = key("Y")
+            restored = finish_flip(key("Y"))
             assert not restored["state"]["flipped"] and batch(restored) == original, "Two flips changed the original layout"
             if level < frame["state"]["levels"]:
                 key("y")
@@ -70,7 +77,8 @@ with tempfile.TemporaryDirectory(prefix="physical-brick-flip-") as directory:
         key("PageDown")  # Wrap to level 1.
         key(" ")
         frame = send("tick", dt=1 / 60)
-        flipped = key("y")
+        frame = key(" ")  # Freeze the ball while the visual wipe continues.
+        flipped = finish_flip(key("y"))
         check_flip(frame, flipped)
         live = batch(flipped)
         assert key("k")["state"]["replay"]

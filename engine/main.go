@@ -330,6 +330,7 @@ var (
 	enableZapper           = defaultEnableZapper
 	enableBreakUnbreakable = defaultEnableBreakUnbreakable
 	enableBigPaddle        = defaultEnableBigPaddle
+	enableBrickFlip        = defaultEnableBrickFlip
 
 	enableSounds = defaultEnableSounds
 
@@ -462,6 +463,7 @@ const (
 	POWER_ZAPPER
 	POWER_BREAK_UNBREAKABLE
 	POWER_BIG_PADDLE
+	POWER_BRICK_FLIP
 )
 
 // ---- Ball struct ----
@@ -637,6 +639,8 @@ type cornerPhysicsDebugEvent struct {
 // speed reached on this level, fastest absolute spin, the largest brick chain
 // caused by one physical ball-to-brick hit, and the fewest balls lost.
 type levelRunStatsData struct {
+	speedPercent   int
+	mixedSpeed     bool
 	elapsedSeconds float64
 	fastestSpeed   float64
 	fastestSpin    float64
@@ -670,6 +674,8 @@ type levelRecordFlags struct {
 // level-complete screens do not add time; the run time is the sum of active
 // per-level play time.
 type fullGameRunStateData struct {
+	speedPercent   int
+	mixedSpeed     bool
 	active         bool
 	recordEligible bool
 	elapsedSeconds float64
@@ -678,6 +684,8 @@ type fullGameRunStateData struct {
 }
 
 type fullGameCompletionData struct {
+	speedPercent       int
+	mixedSpeed         bool
 	valid              bool
 	recordEligible     bool
 	timeMs             int
@@ -3393,6 +3401,7 @@ func resetGlobals() {
 	enableZapper = defaultEnableZapper
 	enableBreakUnbreakable = defaultEnableBreakUnbreakable
 	enableBigPaddle = defaultEnableBigPaddle
+	enableBrickFlip = defaultEnableBrickFlip
 	currentAudioRoom = defaultAudioRoom
 	currentAudioRoomDry = defaultAudioRoomDry
 	debrisEnabled = defaultDebrisEnabled
@@ -3731,6 +3740,10 @@ func applyConfig(config map[string]string) {
 		case "enableBigPaddle":
 			if b, err := strconv.ParseBool(val); err == nil {
 				enableBigPaddle = b
+			}
+		case "enableBrickFlip":
+			if b, err := strconv.ParseBool(val); err == nil {
+				enableBrickFlip = b
 			}
 		case "paddleWidth":
 			if f, err := strconv.ParseFloat(val, 64); err == nil && f > 0 {
@@ -4119,7 +4132,7 @@ func resolveCollisionDebug(
 
 // ---- Build bricks from level layout (with auto-scaling) ----
 func buildBricksFromLevel(lvl levelData, levelIndex int) {
-	bricksVerticalFlipped = false
+	resetBrickFlipState()
 	bricks = nil
 	brickGrid = make(map[int][]int)
 	brickGridCells = nil
@@ -4215,7 +4228,7 @@ func buildBricksFromLevel(lvl levelData, levelIndex int) {
 
 // ---- Fallback default bricks (also scaled) ----
 func initBricksDefault(levelIndex int) {
-	bricksVerticalFlipped = false
+	resetBrickFlipState()
 	bricks = nil
 	brickGrid = make(map[int][]int)
 	brickGridCells = nil
@@ -4403,6 +4416,7 @@ func resetBlackHolePath() {
 }
 
 func clearTimedPowerUps() {
+	clearMagicBrickFlip()
 	stopAllMagicFeatureVoices()
 	lowGravityActive = false
 	lowGravityTimer = 0
@@ -4470,6 +4484,9 @@ func activatePowerUpWithBrick(hitBrick *brick, impactSpeed float64) bool {
 	}
 	if enableBigPaddle {
 		available = append(available, POWER_BIG_PADDLE)
+	}
+	if enableBrickFlip {
+		available = append(available, POWER_BRICK_FLIP)
 	}
 
 	if len(available) == 0 {
@@ -4553,6 +4570,10 @@ func activatePowerUpWithBrick(hitBrick *brick, impactSpeed float64) bool {
 		bigPaddleExpiryPending = false
 		setPaddleSize(paddleWidth*2, paddleHeight)
 		showStatus("Big Paddle!", powerUpDuration)
+	case POWER_BRICK_FLIP:
+		feature = "brickflip"
+		pendingMagicBrickFlips++
+		showStatus("Brick Flip!", 2.0)
 	}
 
 	if !activated || feature == "" {
@@ -4673,22 +4694,23 @@ func writeStoredInt(key string, value int) {
 }
 
 func levelBestStorageKey(levelIndex int, metric string) string {
-	return "breakout.best.v1.level." + strconv.Itoa(levelIndex+1) + "." + metric
+	return speedRecordKey("breakout.best.v1.level."+strconv.Itoa(levelIndex+1)+"."+metric, levelRunStats.speedPercent)
 }
 
-func fullGameBestStorageKey(levelCount int) string {
-	return "breakout.best.v1.fullGame." + strconv.Itoa(levelCount) + ".timeMs"
+func fullGameBestStorageKey(levelCount, speedPercent int) string {
+	return speedRecordKey("breakout.best.v1.fullGame."+strconv.Itoa(levelCount)+".timeMs", speedPercent)
 }
 
-func loadFullGameBestTime(levelCount int) (int, bool) {
+func loadFullGameBestTime(levelCount, speedPercent int) (int, bool) {
 	if levelCount <= 0 {
 		return 0, false
 	}
-	return readStoredInt(fullGameBestStorageKey(levelCount))
+	return readStoredInt(fullGameBestStorageKey(levelCount, speedPercent))
 }
 
 func beginFullGameRun() {
 	fullGameRun = fullGameRunStateData{
+		speedPercent:   gameSpeedPercent,
 		active:         true,
 		recordEligible: !autoPaddleEnabled,
 		nextLevel:      0,
@@ -4727,16 +4749,20 @@ func recordFullGameLevelCompletion() {
 	}
 
 	result := fullGameCompletionData{
+		speedPercent:   fullGameRun.speedPercent,
+		mixedSpeed:     fullGameRun.mixedSpeed,
 		valid:          true,
 		recordEligible: fullGameRun.recordEligible,
 		timeMs:         int(math.Round(fullGameRun.elapsedSeconds * 1000)),
 		levelCount:     fullGameRun.levelCount,
 	}
-	result.previousBestTimeMs, result.previousBestFound = loadFullGameBestTime(result.levelCount)
+	if !result.mixedSpeed {
+		result.previousBestTimeMs, result.previousBestFound = loadFullGameBestTime(result.levelCount, result.speedPercent)
+	}
 	result.bestTimeMs = result.previousBestTimeMs
 	result.bestFound = result.previousBestFound
 	if result.recordEligible && (!result.previousBestFound || result.timeMs < result.previousBestTimeMs) {
-		writeStoredInt(fullGameBestStorageKey(result.levelCount), result.timeMs)
+		writeStoredInt(fullGameBestStorageKey(result.levelCount, result.speedPercent), result.timeMs)
 		result.bestTimeMs = result.timeMs
 		result.bestFound = true
 		result.newRecord = true
@@ -4772,7 +4798,7 @@ func saveBestIfHigher(levelIndex int, metric string, value int, oldValue int, fo
 }
 
 func resetLevelRunStats(levelIndex int) {
-	levelRunStats = levelRunStatsData{}
+	levelRunStats = levelRunStatsData{speedPercent: gameSpeedPercent}
 	levelCompletedStats = levelRunStatsData{}
 	levelCompletedStatsValid = false
 	levelCompletionNewRecords = levelRecordFlags{}
@@ -7906,7 +7932,9 @@ func update(dt float64) {
 	}
 
 	// Active-play time excludes READY, pause, and the level-complete screen.
-	levelRunStats.elapsedSeconds += dt
+	updateMagicBrickFlip(dt)
+	trackFullGameSpeed()
+	levelRunStats.elapsedSeconds += dt / gameSpeedScale()
 
 	// Keyboard and two-thumb controls use acceleration rather than jumping
 	// immediately to one fixed speed. Short taps make small corrections;
@@ -8564,6 +8592,8 @@ func configState(key string) (effective, defaultValue, kind string, ok bool) {
 		return strconv.FormatBool(enableBreakUnbreakable), strconv.FormatBool(defaultEnableBreakUnbreakable), "bool", true
 	case "enableBigPaddle":
 		return strconv.FormatBool(enableBigPaddle), strconv.FormatBool(defaultEnableBigPaddle), "bool", true
+	case "enableBrickFlip":
+		return strconv.FormatBool(enableBrickFlip), strconv.FormatBool(defaultEnableBrickFlip), "bool", true
 	case "paddleWidth":
 		return formatConfigFloat(paddleWidth), formatConfigFloat(defaultPaddleWidth), "float", true
 	case "paddleHeight":
@@ -8845,6 +8875,9 @@ func statsOverlayLines() []string {
 	eligibility := "YES"
 	if !levelRunRecordEligible {
 		eligibility = "NO (ASSISTED)"
+		if run.mixedSpeed {
+			eligibility = "NO (MIXED SPEED)"
+		}
 	}
 	wasChain := "--"
 	if levelPreviousBests.chainFound {
@@ -9896,7 +9929,7 @@ func draw(alpha float64) {
 		ctx.Set("fillStyle", palette[4])
 		ctx.Set("textAlign", "center")
 		ctx.Set("font", "64px GameFont, monospace")
-		ctx.Call("fillText", "LEVEL COMPLETE", centerX, titleY)
+		ctx.Call("fillText", "LEVEL COMPLETE "+gameSpeedResultLabel(run.speedPercent, run.mixedSpeed), centerX, titleY)
 
 		// Results are a centered table, while every cell is left-aligned.
 		const (
@@ -9951,7 +9984,11 @@ func draw(alpha float64) {
 		ctx.Set("textAlign", "center")
 		if assisted {
 			ctx.Set("font", "20px GameFont, monospace")
-			ctx.Call("fillText", "ASSISTED RUN - PERSONAL BESTS NOT UPDATED", centerX, nextY)
+			message := "ASSISTED RUN - PERSONAL BESTS NOT UPDATED"
+			if run.mixedSpeed {
+				message = "MIXED SPEED - PERSONAL BESTS NOT UPDATED"
+			}
+			ctx.Call("fillText", message, centerX, nextY)
 			nextY += 42.0
 		}
 
@@ -9995,7 +10032,7 @@ func draw(alpha float64) {
 				ctx.Set("font", "112px GameFont, monospace")
 				ctx.Call("fillText", "YOU WIN!", centerX, titleY)
 				ctx.Set("font", "22px GameFont, monospace")
-				ctx.Call("fillText", "You beat the full game in one go.", centerX, descriptionY)
+				ctx.Call("fillText", "You beat the full game in one go. "+gameSpeedResultLabel(fullGameCompletion.speedPercent, fullGameCompletion.mixedSpeed), centerX, descriptionY)
 
 				wasTime := "--"
 				if fullGameCompletion.previousBestFound {
@@ -10039,7 +10076,11 @@ func draw(alpha float64) {
 				ctx.Set("textAlign", "center")
 				if assisted {
 					ctx.Set("font", "18px GameFont, monospace")
-					ctx.Call("fillText", "ASSISTED RUN - FULL-GAME RECORD NOT UPDATED", centerX, nextY)
+					message := "ASSISTED RUN - FULL-GAME RECORD NOT UPDATED"
+					if fullGameCompletion.mixedSpeed {
+						message = "MIXED SPEED - FULL-GAME RECORD NOT UPDATED"
+					}
+					ctx.Call("fillText", message, centerX, nextY)
 					nextY += 40.0
 				}
 				ctx.Set("font", "28px GameFont, monospace")
@@ -10146,7 +10187,7 @@ func gameLoop(this js.Value, args []js.Value) interface{} {
 		fpsSampleFrames = 0
 	}
 
-	frameDt := rawDt
+	frameDt := rawDt * gameSpeedScale()
 	if frameDt < 0 {
 		frameDt = 0
 	}
@@ -10156,6 +10197,7 @@ func gameLoop(this js.Value, args []js.Value) interface{} {
 		physicsWarningTimer = physicsWarningHoldSeconds
 		frameDt = physicsMaxFrameDelta
 	}
+	advanceBrickFlipAnimation(frameDt)
 	physicsAccumulator += frameDt
 
 	computeStart := js.Now()
@@ -10163,6 +10205,7 @@ func gameLoop(this js.Value, args []js.Value) interface{} {
 	for physicsAccumulator+1e-12 >= physicsStepSeconds && steps < physicsMaxCatchUpSteps {
 		beginPhysicsStepForRendering()
 		update(physicsStepSeconds)
+		applyPendingMagicBrickFlip()
 		physicsAccumulator -= physicsStepSeconds
 		steps++
 	}
@@ -10189,7 +10232,7 @@ func gameLoop(this js.Value, args []js.Value) interface{} {
 		physicsSampleComputeTime += computeSeconds
 		if physicsSampleElapsed >= 0.5 {
 			physicsStepRateCurrent = float64(physicsSampleSteps) / physicsSampleElapsed
-			physicsRealtimePercent = float64(physicsSampleSteps) * physicsStepSeconds / physicsSampleElapsed * 100
+			physicsRealtimePercent = float64(physicsSampleSteps) * physicsStepSeconds / (physicsSampleElapsed * gameSpeedScale()) * 100
 			physicsComputeLoad = physicsSampleComputeTime / physicsSampleElapsed * 100
 			if physicsSampleDroppedTime > 0 || physicsComputeLoad >= 90 {
 				physicsWarningTimer = physicsWarningHoldSeconds
@@ -10724,6 +10767,10 @@ func setupInput() {
 			return nil
 		}
 		if physicsEditorVisible {
+			return nil
+		}
+
+		if !replayModeActive && !e.Get("repeat").Bool() && gameSpeedShortcut(key) {
 			return nil
 		}
 
