@@ -15,6 +15,8 @@ g++ -O2 -std=c++17 -fPIC "$project_dir/tests/audio_mixer_test.cpp" $(pkg-config 
 if [[ ${PHYSICAL_TEST_WAYLAND:-0} == 1 ]]; then
   g++ -O2 -std=c++17 -fPIC "$project_dir/tests/frame_clock_test.cpp" "$project_dir/bin/pointerlock.o" "$project_dir/bin/protocols/"*.o -I"$project_dir/bin" $(pkg-config --cflags --libs Qt6Quick Qt6Qml Qt6Gui Qt6Multimedia wayland-client) -o "$project_dir/bin/frame-clock-test"
   PHYSICAL_FRAME_DIAGNOSTICS=0 QT_QPA_PLATFORM=wayland "$project_dir/bin/frame-clock-test"
+  g++ -O2 -std=c++17 -fPIC "$project_dir/tests/frame_submission_clock_test.cpp" "$project_dir/bin/pointerlock.o" "$project_dir/bin/protocols/"*.o -I"$project_dir/bin" $(pkg-config --cflags --libs Qt6Quick Qt6Qml Qt6Gui Qt6Multimedia wayland-client) -o "$project_dir/bin/frame-submission-clock-test"
+  PHYSICAL_FRAME_DIAGNOSTICS=0 QT_QPA_PLATFORM=wayland "$project_dir/bin/frame-submission-clock-test"
   g++ -O2 -std=c++17 -fPIC "$project_dir/tests/gpu_bricks_test.cpp" "$project_dir/bin/pointerlock.o" "$project_dir/bin/protocols/"*.o -I"$project_dir/bin" $(pkg-config --cflags --libs Qt6Quick Qt6Qml Qt6Gui Qt6Multimedia wayland-client) -o "$project_dir/bin/gpu-bricks-test"
   QT_QPA_PLATFORM=wayland "$project_dir/bin/gpu-bricks-test"
   python3 "$project_dir/tests/pointer_lock.py"

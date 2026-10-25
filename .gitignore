@@ -8,6 +8,7 @@ __pycache__/
 /bin/renderer-test
 /bin/frame-recorder-test
 /bin/frame-clock-test
+/bin/frame-submission-clock-test
 /bin/process-write-test
 
 /bin/pointerlock.moc

@@ -20,7 +20,7 @@ open. The scoped shell's `isPluginOpen` API supplies that state; a paused engine
 retained after closing does not keep the icon highlighted.
 
 While gameplay is animated, the game window requests its next display frame
-from its own Qt frame callback. Engine replies update the scene asynchronously;
+after Qt submits the previous one. Engine replies update the scene asynchronously;
 their arrival does not control the display clock. Requests to the engine remain
 bounded to two outstanding ticks. Window redraws reuse unchanged item textures,
 and the continuous requests stop when the game pauses or closes.
@@ -69,13 +69,17 @@ unused contours are discarded on both sides. Returning particles resend their
 definitions, including after replay or adaptive rendering. This preserves the
 particles, drawing order and physics while reducing packet and allocation work.
 
-The game window's `QQuickWindow::afterAnimating` preparation signal requests
-frames, with at most two requests outstanding. This gives the separate engine
-time to prepare the next scene and avoids depending on Quickshell's shared
-`FrameAnimation` clock, which Qt can drive with timers in multi-window setups.
-Each animated request carries the measured window-frame duration; elapsed time from
+The game window's `QQuickWindow::frameSwapped` signal timestamps each submitted
+frame on the render thread. A queued GUI-thread callback requests the next engine
+scene and window update, with at most two engine requests outstanding. This gives
+the engine time to prepare the next scene and avoids depending on Quickshell's
+shared `FrameAnimation` clock, which Qt can drive with timers in multi-window
+setups. Capturing the timestamp before GUI delivery also prevents short GUI
+stalls from changing the motion time step while submissions remain evenly paced.
+Each animated request carries the measured submission interval; elapsed time from
 skipped requests accumulates into the next one. Physics and render interpolation
-use that duration rather than uneven pipe-arrival times in the Go process.
+use that duration rather than uneven GUI preparation or pipe-arrival times.
+Submission is still not a guarantee of physical presentation on the display.
 Pause, menu and hidden transitions discard unsent animation time.
 Window changes and resumes reset the clock to the current screen's refresh
 period, excluding time spent idle. It does not change the 240 Hz physics steps.
@@ -103,7 +107,7 @@ same FPS as 1080p.
 Qt references: [scene graph rendering](https://doc.qt.io/qt-6/qtquick-visualcanvas-scenegraph-renderer.html),
 [graphics backends](https://doc.qt.io/qt-6/qtquick-visualcanvas-adaptations.html),
 [animation clocks](https://doc.qt.io/qt-6/qtquick-visualcanvas-scenegraph.html)
-and [window frame preparation](https://doc.qt.io/qt-6/qquickwindow.html#afterAnimating).
+and [frame submission](https://doc.qt.io/qt-6/qquickwindow.html#frameSwapped).
 
 ## Build and runtime
 

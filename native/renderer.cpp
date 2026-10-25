@@ -15,6 +15,7 @@
 #include <QSGRendererInterface>
 #include <QMutex>
 #include <QElapsedTimer>
+#include <QPointer>
 #include <QMutexLocker>
 #include <QSet>
 #include <atomic>
@@ -272,6 +273,8 @@ class GameRenderer : public QQuickPaintedItem {
     std::atomic<int> count{0};
     std::atomic<quint64> clockEpoch{0};
     QElapsedTimer frameClock;
+    qint64 lastSubmittedFrame=0;
+    quint64 submittedFrameEpoch=0;
     QMetaObject::Connection clockConnection;
     QMetaObject::Connection submissionConnection;
     FrameRecorder recorder;
@@ -489,26 +492,25 @@ public:
             if(!view)return;
             if(recorder.enabled)submissionConnection=connect(view,&QQuickWindow::frameSwapped,this,
                 [counter=recorder.submitted]{counter->fetch_add(1,std::memory_order_relaxed);},Qt::DirectConnection);
-            // This window's preparation point gives the engine a full render
-            // interval to return its next scene, without a shared animation timer.
-            clockConnection=connect(view,&QQuickWindow::afterAnimating,this,
-                [this,view,last=qint64(0),seen=quint64(0)]() mutable {
+            // Timestamp submissions on the render thread, before a busy GUI
+            // event loop can delay delivery. Simulation and redraw requests
+            // still run on the GUI thread, after the current frame was sent.
+            clockConnection=connect(view,&QQuickWindow::frameSwapped,this,
+                [this,target=QPointer<QQuickWindow>(view)] {
                     const quint64 epoch=clockEpoch.load();
-                    if(!(epoch&1)) { last=0; seen=epoch; return; }
-                    if(epoch!=seen) { last=0; seen=epoch; }
+                    if(!(epoch&1))return;
                     const qint64 now=frameClock.nsecsElapsed();
-                    const qreal refresh=view->screen() ? view->screen()->refreshRate() : 60.;
-                    const qreal elapsed=last ? (now-last)/1e9 : 1./qMax(1.,refresh);
-                    last=now;
-                    recorder.clockTick(elapsed);
-                    if(clockEpoch.load()==epoch) {
+                    QMetaObject::invokeMethod(this,[this,target,epoch,now] {
+                        if(!target||window()!=target||clockEpoch.load()!=epoch)return;
+                        if(submittedFrameEpoch!=epoch)lastSubmittedFrame=0;
+                        submittedFrameEpoch=epoch;
+                        const qreal refresh=target->screen()?target->screen()->refreshRate():60.;
+                        const qreal elapsed=lastSubmittedFrame ? (now-lastSubmittedFrame)/1e9 : 1./qMax(1.,refresh);
+                        lastSubmittedFrame=now;
+                        recorder.clockTick(elapsed);
                         emit frameTick(elapsed);
-                        // Engine replies dirty the scene asynchronously. Keep
-                        // requesting display frames while playing so their
-                        // arrival time cannot become the clock's own cadence.
-                        // Window updates reuse unchanged item textures.
-                        if(clockEpoch.load()==epoch&&view->isVisible())view->update();
-                    }
+                        if(clockEpoch.load()==epoch&&target->isVisible())target->update();
+                    },Qt::QueuedConnection);
                 },Qt::DirectConnection);
         });
 
