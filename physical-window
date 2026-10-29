@@ -12,11 +12,9 @@ end
 local top = 0
 local monitor = hl.get_active_monitor()
 if monitor then
-  for _, layer in ipairs(hl.get_layers({ monitor = monitor.name, namespace = "omarchy-bar" })) do
-    if layer.y <= monitor.y + 1 then
-      top = math.max(top, layer.y + layer.h - monitor.y)
-    end
-  end
+  -- Shell layers may cover the whole screen for popups. Only the reserved
+  -- work area measures the space actually occupied by the bar.
+  top = (monitor.reserved or {}).top or 0
 end
 _G.physical_plugin_window_rule = hl.window_rule({
   name = "physical-plugin",
