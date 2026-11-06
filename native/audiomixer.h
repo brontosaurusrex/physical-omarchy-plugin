@@ -21,6 +21,7 @@
 class AudioMixer : public QObject {
     Q_OBJECT
     friend class AudioMixerTest;
+    friend class AudioOutputTest;
     Q_PROPERTY(QUrl directory READ directory WRITE setDirectory NOTIFY directoryChanged)
     Q_PROPERTY(qreal volume READ volume WRITE setVolume NOTIFY volumeChanged)
     Q_PROPERTY(quint64 revision READ revision NOTIFY revisionChanged)
@@ -47,15 +48,60 @@ class AudioMixer : public QObject {
     QVector<Voice> voices;
     QMutex mutex;
     QAudioFormat format;
+    QMediaDevices devices;
+    QByteArray outputDeviceId;
+    QVariantMap roomSettings;
     AudioRoom room;
     QAudioSink *sink=nullptr;
     Output *output=nullptr;
     QTimer status;
+    QTimer recovery;
     bool started=false;
+    bool outputWanted=false;
     int nextVoice=0;
     void startOutput() {
-        if(!started) { sink->start(output); started=true; }
+        if(!sink)return;
+        outputWanted=true;
+        // start() can synchronously report an error and clear started again.
+        if(!started) { started=true; sink->start(output); }
         status.start(); ++version; emit revisionChanged();
+    }
+    void refreshOutput() { configureOutput(QMediaDevices::defaultAudioOutput()); }
+    void configureOutput(const QAudioDevice &device) {
+        if(sink && !device.isNull() && device.id()==outputDeviceId &&
+           sink->error()==QtAudio::NoError && (!outputWanted || sink->state()!=QtAudio::StoppedState))return;
+        recovery.stop();
+        if(sink) {
+            // Stop backend reads before changing the mixer format or buffers.
+            disconnect(sink,nullptr,this,nullptr);
+            sink->stop(); delete sink; sink=nullptr;
+        }
+        started=false;
+        outputDeviceId.clear();
+        {
+            QMutexLocker lock(&mutex);
+            // Never replay old collisions or echoes after a device reconnects.
+            voices.clear(); room=AudioRoom{};
+            if(!device.isNull()) {
+                if(!format.isValid() || !device.isFormatSupported(format))format=device.preferredFormat();
+                room.configure(roomSettings,format.sampleRate());
+            }
+        }
+        if(!device.isNull()) {
+            outputDeviceId=device.id();
+            sink=new QAudioSink(device,format,this);
+            sink->setBufferSize(format.bytesForDuration(40000));
+            connect(sink,&QAudioSink::stateChanged,this,[this](QtAudio::State state) {
+                if(state==QtAudio::StoppedState && outputWanted) {
+                    started=false;
+                    // Allow PipeWire/default-device updates to settle. This
+                    // also recovers a stopped stream after an audio-service restart.
+                    recovery.start();
+                }
+            });
+            if(outputWanted)startOutput();
+        }
+        ++version; emit revisionChanged();
     }
     static void setPan(Voice &v,double pan) {
         v.pan=std::clamp(pan,-1.,1.);
@@ -127,13 +173,12 @@ class AudioMixer : public QObject {
     }
 public:
     explicit AudioMixer(QObject *parent=nullptr):QObject(parent) {
-        const auto device=QMediaDevices::defaultAudioOutput();
-        if (!device.isNull()) {
-            format=device.preferredFormat();
-            sink=new QAudioSink(device,format,this);
-            sink->setBufferSize(format.bytesForDuration(40000));
-            output=new Output(this);
-        }
+        output=new Output(this);
+        recovery.setSingleShot(true);
+        recovery.setInterval(500);
+        connect(&recovery,&QTimer::timeout,this,&AudioMixer::refreshOutput);
+        connect(&devices,&QMediaDevices::audioOutputsChanged,this,&AudioMixer::refreshOutput);
+        refreshOutput();
         status.setInterval(30);
         connect(&status,&QTimer::timeout,this,[this]{
             bool empty; { QMutexLocker lock(&mutex); empty=voices.isEmpty(); }
@@ -141,7 +186,11 @@ public:
             if(empty) status.stop();
         });
     }
-    ~AudioMixer() override { if(sink) sink->stop(); }
+    ~AudioMixer() override {
+        recovery.stop();
+        disconnect(&devices,nullptr,this,nullptr);
+        if(sink) { disconnect(sink,nullptr,this,nullptr); sink->stop(); delete sink; sink=nullptr; }
+    }
     QUrl directory() const { return folder; }
     qreal volume() const { return gain; }
     quint64 revision() const { return version; }
@@ -180,7 +229,7 @@ public:
     }
     Q_INVOKABLE bool ready(const QString &name) { QMutexLocker lock(&mutex); return clips.contains(name); }
     Q_INVOKABLE void setRoom(const QVariantMap &settings) {
-        QMutexLocker lock(&mutex); room.configure(settings,format.sampleRate());
+        QMutexLocker lock(&mutex); roomSettings=settings; room.configure(settings,format.sampleRate());
     }
     Q_INVOKABLE bool playing(const QString &name,int index) {
         QMutexLocker lock(&mutex);

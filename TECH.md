@@ -210,6 +210,19 @@ after 12 seconds, and closing/muting clears them immediately. Native oscillators
 resampling and scheduling still differ from browser DSP, so this is not
 bit-identical output.
 
+The mixer follows Qt's current default output when audio devices change. It
+recreates a disconnected output and retries stopped streams after 500 ms,
+retaining volume, decoded samples and room settings. Old collision voices and
+echoes are discarded on reconnect. The output buffer request remains 40 ms;
+Bluetooth headphones can add their own latency. An audio-service crash can
+still interrupt playback until the service and a usable output return.
+
+`tests/audio_output.py` uses silent temporary PipeWire/PulseAudio outputs to
+check switching, device removal, stopped-stream retry and recovery after no
+output is available. It preserves the selected system output and checks that
+recovery retains settings without replaying stale sounds. It runs as part of
+`PHYSICAL_TEST_WAYLAND=1 ./check` and requires `pactl` and a running audio server.
+
 `tests/keyboard.py` sends Qt keyboard events through the actual QML window,
 using a temporary safe level to keep shortcut assertions independent of ball
 losses. It covers Zen visibility and controls as well as the existing shortcuts.
