@@ -152,7 +152,9 @@ only writes the module path; it neither compiles nor downloads anything. The
 standalone app uses a normal relative Qt module definition. Bundles require
 compatible Qt and system libraries; see [PACKAGING.md](PACKAGING.md).
 
-The shell controls follow Omarchy's theme. The top-right game controls use the
+The shell controls follow Omarchy's theme. Local theme and Commons palette
+references are qualified explicitly to avoid the `Color` name collision in
+Qt 6.12.  The top-right game controls use the
 bundled Envy Code R Nerd Font Mono Bold for pause/play and fullscreen, with the
 web version's exact pause/fullscreen glyphs and Unicode vertical ellipsis
 for the menu (with Qt font fallback where needed). Their tint follows the level
@@ -167,6 +169,14 @@ Standalone menus use Qt's desktop palette. Both hosts
 share `GameCore.qml`, render/audio modules and controls. Plugin and standalone
 progress files are separate from each other and from the web version.
 No browser, web server or WebAssembly runs the game.
+
+Press **H**, or use **Zen** in the menu, to hide the normal corner HUD,
+status readouts, top-right buttons and replay transport text. Press H again to
+restore them; **?** still opens the menu while its button is hidden. F keeps
+its existing FPS behavior, and keyboard, mouse capture, replay and lab controls
+remain active. Start, pause and result screens and explicitly requested
+diagnostic panels remain available. Zen defaults off and lasts for the engine
+session; it is not stored in progress or replay data.
 
 Mouse capture tracks the playfield's current surface region after layout,
 including letterboxing during window resizing. The Wayland constraint stays
@@ -200,9 +210,11 @@ after 12 seconds, and closing/muting clears them immediately. Native oscillators
 resampling and scheduling still differ from browser DSP, so this is not
 bit-identical output.
 
-`tests/keyboard.py` sends Qt keyboard events through the actual QML window.
+`tests/keyboard.py` sends Qt keyboard events through the actual QML window,
+using a temporary safe level to keep shortcut assertions independent of ball
+losses. It covers Zen visibility and controls as well as the existing shortcuts.
 `tests/pointer_lock.py` verifies Wayland capture through the QML mouse handler,
-compositor fullscreen/maximize and native fullscreen transitions, focus loss,
+compositor fullscreen/maximize and native fullscreen transitions, Zen toggles, focus loss,
 passive notifications, manual reacquisition, menu, Escape and reopening.
 `PHYSICAL_MOUSE_SECONDS=300 python3 tests/mouse_torture.py` repeats these paths
 on the live Wayland desktop, also checking uncaptured margin movement through

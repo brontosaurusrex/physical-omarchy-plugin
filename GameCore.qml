@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls as QQC
 import QtQuick.Layouts
-import "theme"
+import "theme" as Theme
 import "native" as Native
 
 Item {
@@ -23,6 +23,7 @@ Item {
     property bool spaceHeld: false
     property bool fullscreenChord: false
     readonly property bool fullscreen: panel ? panel.fullscreen : false
+    readonly property bool zenMode: state.zen === true
     readonly property bool mouseLocked: pointerLock.locked
     readonly property color backdropColor: "#1a1a2e"
     readonly property real playfieldMargin: 6
@@ -38,7 +39,7 @@ Item {
     readonly property size defaultWindowSize: initialWindowSize(panel && panel.screen ? panel.screen.width : 1280, panel && panel.screen ? panel.screen.height : 760)
     readonly property int defaultWindowWidth: defaultWindowSize.width
     readonly property int defaultWindowHeight: defaultWindowSize.height
-    readonly property color hudColor: state.palette && state.palette.length > 4 ? state.palette[4] : Color.foreground
+    readonly property color hudColor: state.palette && state.palette.length > 4 ? state.palette[4] : Theme.Color.foreground
     function focusGame() { Qt.callLater(function() { gameInput.forceActiveFocus(); }); }
     function toggleMenu() {
         menuVisible = !menuVisible;
@@ -47,6 +48,7 @@ Item {
     }
     function closeMenu() { menuVisible = false; focusGame(); }
     function toggleFullscreen() { panel.fullscreen = !panel.fullscreen; focusGame(); }
+    function toggleZen() { send({action: "toggle-zen"}); focusGame(); }
     function handleEscape() {
         if (state.replay) {
             pointerLock.release();
@@ -59,6 +61,7 @@ Item {
         if (event.key === Qt.Key_F && spaceHeld) { if (!event.isAutoRepeat) { toggleFullscreen(); fullscreenChord = true; } return; }
         if (event.key === Qt.Key_Question) { if (!menuVisible && !event.isAutoRepeat) toggleMenu(); return; }
         if (event.key === Qt.Key_Escape) { if (!event.isAutoRepeat) handleEscape(); return; }
+        if (event.key === Qt.Key_H) { if (!event.isAutoRepeat) toggleZen(); return; }
         if (event.key === Qt.Key_Q && !state.editor) { dismiss(); return; }
         if (event.key === Qt.Key_S && !event.isAutoRepeat && !menuVisible && !state.editor) { send({action:"toggle-sound"}); return; }
         if (event.key === Qt.Key_K && (event.modifiers & Qt.ShiftModifier) && state.replay) { send({action:"replay-exit"}); return; }
@@ -99,7 +102,7 @@ Item {
     }
     property bool windowSetupReady: true
     readonly property string enginePath: Qt.resolvedUrl("bin/physical-engine").toString().replace(/^file:\/\//, "")
-    readonly property var theme: ({ background: String(Color.background), foreground: String(Color.foreground), accent: String(Color.accent), urgent: String(Color.urgent), muted: String(Color.muted) })
+    readonly property var theme: ({ background: String(Theme.Color.background), foreground: String(Theme.Color.foreground), accent: String(Theme.Color.accent), urgent: String(Theme.Color.urgent), muted: String(Theme.Color.muted) })
     // The original engine keeps debris moving behind the completion table.
     // Use the display clock until it disappears, then return to idle polling.
     readonly property bool animating: opened && engineReady && !menuVisible && ((!state.paused && !state.ready && !state.gameOver && (!state.complete || state.debrisPieces > 0) && (!state.editor || state.live)) || (!state.replay && state.flipAnimating === true) || (state.replay && state.replayDirection !== 0))
@@ -256,7 +259,7 @@ Item {
                 width: Math.min(parent.width, parent.height * canvas.gameWidth / canvas.gameHeight)
                 height: width * canvas.gameHeight / canvas.gameWidth
                 focus: true
-                GameCanvas { id: canvas; objectName: "physicalCanvas"; frameClockRunning: root.animating; onFrameTick: function(delta) { root.tick(delta); } anchors.fill: parent; theme: root.theme; surroundColor: root.backdropColor; fontFamily: gameFont.status === FontLoader.Ready ? gameFont.name : Style.resolvedFontFamily; }
+                GameCanvas { id: canvas; objectName: "physicalCanvas"; frameClockRunning: root.animating; onFrameTick: function(delta) { root.tick(delta); } anchors.fill: parent; theme: root.theme; surroundColor: root.backdropColor; fontFamily: gameFont.status === FontLoader.Ready ? gameFont.name : Theme.Style.resolvedFontFamily; }
                 Native.PointerLock {
                     id: pointerLock
                     anchors.fill: parent
@@ -287,6 +290,8 @@ Item {
                 Keys.onPressed: function(event) { root.pressKey(event); event.accepted = true; }
                 Keys.onReleased: function(event) { root.releaseKey(event); event.accepted = true; }
                 Row {
+                    objectName: "hud-controls"
+                    visible: !root.zenMode
                     readonly property real gameScale: gameInput.width / canvas.gameWidth
                     anchors.top: parent.top
                     anchors.right: parent.right
@@ -305,7 +310,7 @@ Item {
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
                 anchors.right: parent.right
-                width: Math.min(Style.space(420), parent.width * 0.46)
+                width: Math.min(Theme.Style.space(420), parent.width * 0.46)
                 active: root.state.editor === true && !root.menuVisible
                 sourceComponent: Tuner {
                     state: root.state
@@ -319,7 +324,7 @@ Item {
                 anchors.top: parent.top
                 anchors.right: parent.right
                 anchors.margins: 12
-                width: Math.min(Style.space(440), parent.width - 24)
+                width: Math.min(Theme.Style.space(440), parent.width - 24)
                 height: Math.min(implicitHeight, parent.height - 24)
                 visible: root.menuVisible
                 controller: root
@@ -331,16 +336,16 @@ Item {
                 width: Math.min(parent.width - 32, toast.implicitWidth + 24)
                 height: toast.implicitHeight + 16
                 visible: !!toast.text
-                color: Color.menu.background
-                radius: Style.cornerRadius
+                color: Theme.Color.menu.background
+                radius: Theme.Style.cornerRadius
                 Text {
                     id: toast
                     anchors.centerIn: parent
                     width: Math.min(implicitWidth, parent.width - 24)
                     text: root.errorText || canvas.renderError || root.notice
-                    color: root.errorText || canvas.renderError ? Color.urgent : Color.foreground
-                    font.family: Style.fontFamily
-                    font.pixelSize: Style.font.bodySmall
+                    color: root.errorText || canvas.renderError ? Theme.Color.urgent : Theme.Color.foreground
+                    font.family: Theme.Style.fontFamily
+                    font.pixelSize: Theme.Style.font.bodySmall
                     wrapMode: Text.Wrap
                 }
             }

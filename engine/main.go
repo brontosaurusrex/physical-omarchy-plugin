@@ -9863,35 +9863,37 @@ func draw(alpha float64) {
 	ctx.Call("roundRect", renderState.paddleX, paddle.y, paddle.w, paddle.h, paddleRadius)
 	ctx.Call("fill")
 
-	ctx.Set("fillStyle", palette[4])
-	ctx.Set(
-		"font",
-		"18px GameFont, monospace",
-	)
-	// Match the P display: 10 units from the canvas edge plus 12 units of
-	// internal text padding. Its first-line baseline would be 37 at the top.
-	const (
-		hudTextX      = 22.0
-		hudFirstLineY = 37.0
-		hudLineStep   = 30.0
-	)
-	updateHUDCache()
-	ctx.Call("fillText", hudLivesText, hudTextX, hudFirstLineY)
-	ctx.Call("fillText", hudLevelText, hudTextX, hudFirstLineY+hudLineStep)
-	ctx.Call("fillText", hudScoreText, hudTextX, hudFirstLineY+2*hudLineStep)
+	if !nativeZen {
+		ctx.Set("fillStyle", palette[4])
+		ctx.Set(
+			"font",
+			"18px GameFont, monospace",
+		)
+		// Match the P display: 10 units from the canvas edge plus 12 units of
+		// internal text padding. Its first-line baseline would be 37 at the top.
+		const (
+			hudTextX      = 22.0
+			hudFirstLineY = 37.0
+			hudLineStep   = 30.0
+		)
+		updateHUDCache()
+		ctx.Call("fillText", hudLivesText, hudTextX, hudFirstLineY)
+		ctx.Call("fillText", hudLevelText, hudTextX, hudFirstLineY+hudLineStep)
+		ctx.Call("fillText", hudScoreText, hudTextX, hudFirstLineY+2*hudLineStep)
 
-	currentSpeed := math.Hypot(ball.vx, ball.vy)
-	ctx.Call("fillText", "Speed: "+fmt.Sprintf("%.0f", currentSpeed), hudTextX, hudFirstLineY+3*hudLineStep)
+		currentSpeed := math.Hypot(ball.vx, ball.vy)
+		ctx.Call("fillText", "Speed: "+fmt.Sprintf("%.0f", currentSpeed), hudTextX, hudFirstLineY+3*hudLineStep)
 
-	if math.Abs(ball.omega) > 100 {
-		ctx.Set("fillStyle", "#ff0000")
-	}
-	ctx.Call("fillText", "Spin:  "+fmt.Sprintf("%+.0f", ball.omega), hudTextX, hudFirstLineY+4*hudLineStep)
-	ctx.Set("fillStyle", palette[4])
+		if math.Abs(ball.omega) > 100 {
+			ctx.Set("fillStyle", "#ff0000")
+		}
+		ctx.Call("fillText", "Spin:  "+fmt.Sprintf("%+.0f", ball.omega), hudTextX, hudFirstLineY+4*hudLineStep)
+		ctx.Set("fillStyle", palette[4])
 
-	for i, message := range statusMessages {
-		y := hudFirstLineY + 160.0 + float64(i)*hudLineStep
-		ctx.Call("fillText", message.text, hudTextX, y)
+		for i, message := range statusMessages {
+			y := hudFirstLineY + 160.0 + float64(i)*hudLineStep
+			ctx.Call("fillText", message.text, hudTextX, y)
+		}
 	}
 
 	if waitingForStart && !gameOver {

@@ -53,7 +53,15 @@ ShellRoot {
         if (root.phase === 1) { click(); root.phase = 2; return; }
         if (root.phase === 2) {
             if (!game.mouseLocked) { console.log("POINTER waiting",game.mouseCapture.supported,game.mouseCapture.requested,game.notice); return; }
-            console.log("POINTER right click captured"); root.popup = true; root.phase = 25; return;
+            console.log("POINTER right click captured"); input.keyClick(Qt.Key_H); root.phase = 28; return;
+        }
+        if (root.phase === 28) {
+            if (!game.zenMode || !game.mouseLocked || !game.mouseCapture.requested) { fail("Zen interrupted capture"); return; }
+            input.keyClick(Qt.Key_H); root.phase = 29; return;
+        }
+        if (root.phase === 29) {
+            if (game.zenMode || !game.mouseLocked || !game.mouseCapture.requested) { fail("leaving Zen interrupted capture"); return; }
+            console.log("POINTER capture survived Zen on/off"); root.popup = true; root.phase = 25; return;
         }
         if (root.phase === 25) {
             if (!game.mouseLocked || !game.mouseCapture.requested || game.state.paused) { fail("notification interrupted capture"); return; }
@@ -135,7 +143,7 @@ ShellRoot {
         if (root.phase === 10) { input.keyClick(Qt.Key_Escape); root.phase = 11; return; }
         if (root.phase === 11) {
             if (game.opened || game.fullscreen || game.mouseCapture.requested) { fail("Escape in fullscreen did not close"); return; }
-            console.log("POINTER PASS: right click lock/release, passive notification, compositor fullscreen/maximize, native fullscreen, focus loss, reacquire, Escape, menu, reopen"); Qt.exit(0);
+            console.log("POINTER PASS: right click lock/release, Zen, passive notification, compositor fullscreen/maximize, native fullscreen, focus loss, reacquire, Escape, menu, reopen"); Qt.exit(0);
         }
     } }
 }

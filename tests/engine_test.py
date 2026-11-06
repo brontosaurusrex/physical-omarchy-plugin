@@ -26,6 +26,23 @@ with tempfile.TemporaryDirectory(prefix="physical-native-test-") as directory:
     assert first["state"]["volume"] == 0.25
     assert any(op[:2] == ["fillText", "P H Y S I C A L"] for op in first["ops"]), "First-level title was lost"
     assert first["room"]["name"] == "space" and first["room"]["dry"] == .5
+    def texts(packet):
+        return [op[1] for op in packet["ops"] if op[0] == "fillText"]
+    def has_hud(packet):
+        return any(text.startswith(("Lives: ", "Level: ", "Score: ", "Speed: ", "Spin: ")) for text in texts(packet))
+    assert not first["state"]["zen"] and has_hud(first)
+    zen = send("toggle-zen")
+    assert zen["state"]["zen"] and not has_hud(zen), "Zen left the normal HUD in the draw packet"
+    assert "P H Y S I C A L" in texts(zen), "Zen hid the start screen"
+    for field in ("lives", "score", "level", "x", "y", "omega", "paddleX", "ready", "paused", "sound", "gameSpeed"):
+        assert zen["state"][field] == first["state"][field], "Zen changed gameplay: " + field
+    zen_fps = key("f")
+    assert zen_fps["state"]["zen"] and zen_fps["state"]["fpsVisible"]
+    assert any(text.startswith("FPS ") for text in texts(zen_fps)), "F did not show FPS during Zen"
+    assert not has_hud(zen_fps)
+    normal = send("toggle-zen")
+    assert not normal["state"]["zen"] and has_hud(normal) and normal["state"]["fpsVisible"]
+    key("f")
     assert send("volume", value=0.37)["state"]["volume"] == 0.37
     assert send("volume", value=2)["state"]["volume"] == 1
     assert send("volume", value=-1)["state"]["volume"] == 0
@@ -58,6 +75,13 @@ with tempfile.TemporaryDirectory(prefix="physical-native-test-") as directory:
     live_cache, live_batch = brick_batch(frame)
     replay = key("k")
     assert replay["state"]["replay"]
+    zen_replay = send("toggle-zen")
+    assert zen_replay["state"]["zen"] and zen_replay["state"]["replay"]
+    assert not has_hud(zen_replay) and not any(text.startswith("REPLAY ") for text in texts(zen_replay))
+    for field in ("replayFrame", "replayDirection", "replayFrames", "x", "y", "score"):
+        assert zen_replay["state"][field] == replay["state"][field], "Zen changed replay: " + field
+    normal_replay = send("toggle-zen")
+    assert has_hud(normal_replay) and any(text.startswith("REPLAY ") for text in texts(normal_replay))
     replay_cache, replay_batch = brick_batch(replay)
     assert live_cache != replay_cache, "Replay overwrote the live brick cache"
     assert replay_batch[2:] == live_batch[2:]

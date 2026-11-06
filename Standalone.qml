@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Window
-import "theme"
+import "theme" as Theme
 import "native" as Native
 
 Window {
@@ -20,9 +20,9 @@ Window {
         id: frame
         anchors.fill: parent
         color: window.color
-        radius: window.fullscreen ? 0 : Style.cornerRadius
-        border.width: window.fullscreen ? 0 : Style.normalBorderWidth
-        border.color: Color.menu.border
+        radius: window.fullscreen ? 0 : Theme.Style.cornerRadius
+        border.width: window.fullscreen ? 0 : Theme.Style.normalBorderWidth
+        border.color: Theme.Color.menu.border
     }
     GameCore {
         id: game

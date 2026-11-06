@@ -7,7 +7,7 @@ shell_dir = pathlib.Path(os.environ.get("OMARCHY_SHELL_DIR", "/usr/share/omarchy
 harness = r'''
 import QtQuick
 import Quickshell
-import qs.Commons
+import qs.Commons as Commons
 import "Port" as Port
 
 ShellRoot {
@@ -36,7 +36,7 @@ ShellRoot {
         onTriggered: {
             root.rounds++;
             if (game.errorText || game.renderError) { console.error("SMOKE FAILED", game.errorText, game.renderError); Qt.exit(1); }
-            if (root.rounds > 150) { console.error("SMOKE TIMEOUT", root.phase); Qt.exit(1); }
+            if (root.rounds > 150) { console.error("SMOKE TIMEOUT", root.phase, "level", game.state.level, "expected", root.checkedLevel, "state", JSON.stringify(game.state)); Qt.exit(1); }
             if (!game.engineReady || game.paintedFrames < 2) return;
             if (root.capturing) return;
             if (root.phase === 0) {
@@ -83,7 +83,7 @@ ShellRoot {
                 }
                 game.toggleMenu();
                 var controls = findItem(game.contentView, "controls-table"), hint = findItem(game.contentView, "mouse-capture-hint");
-                if (!controls || !controls.visible || !hint || !hint.visible || String(hint.color) !== String(Color.foreground)) { console.error("SMOKE missing controls or unreadable mouse hint"); Qt.exit(1); return; }
+                if (!controls || !controls.visible || !hint || !hint.visible || String(hint.color) !== String(Commons.Color.foreground)) { console.error("SMOKE missing controls or unreadable mouse hint"); Qt.exit(1); return; }
                 var volume = findItem(game.contentView, "audio-volume");
                 if (!volume || volume.width < 50 || volume.height < 12 || volume.value !== 0.25) { console.error("SMOKE unusable volume slider"); Qt.exit(1); }
                 volume.value = 0.37; volume.moved();
@@ -97,14 +97,14 @@ ShellRoot {
             } else if (root.phase === 3 && game.state.editor) {
                 var gravity = findItem(game.contentView, "physics-gravity");
                 if (!gravity || gravity.height < 12 || gravity.width < 100) { console.error("SMOKE unusable physics slider"); Qt.exit(1); }
-                Color.shellValues = ({});
-                Color.background = "#efefef"; Color.foreground = "#111111"; Color.accent = "#2266aa"; Color.urgent = "#cc2233"; Color.muted = "#777777";
+                Commons.Color.shellValues = ({});
+                Commons.Color.background = "#efefef"; Commons.Color.foreground = "#111111"; Commons.Color.accent = "#2266aa"; Commons.Color.urgent = "#cc2233"; Commons.Color.muted = "#777777";
                 game.send({ action:"setting", group:"physics", key:"gravity", value:300 });
                 root.phase = 4;
             } else if (root.phase === 4) {
                 capture("physical-light-lab"); root.phase = 14;
             } else if (root.phase === 14) {
-                game.shortcut("e"); game.close(); root.initialFrames = game.paintedFrames; root.phase = 5; root.rounds = 0;
+                game.shortcut("e"); if (game.state.auto) game.shortcut("o"); game.close(); root.initialFrames = game.paintedFrames; root.phase = 5; root.rounds = 0;
             } else if (root.phase === 5 && root.rounds >= 5) {
                 if (game.paintedFrames - root.initialFrames > 2) { console.error("SMOKE hidden kept rendering"); Qt.exit(1); }
                 game.open("{}"); root.phase = 6;

@@ -701,7 +701,7 @@ func drawReplayZapperBolts(frame *replayFrame) {
 }
 
 func drawReplayHUD(frame *replayFrame) {
-	if frame == nil || !defaultReplayShowHUD {
+	if nativeZen || frame == nil || !defaultReplayShowHUD {
 		return
 	}
 	const (
@@ -749,6 +749,9 @@ func replayTransportText() string {
 }
 
 func drawReplayTransportOverlay() {
+	if nativeZen {
+		return
+	}
 	text := replayTransportText()
 	ctx.Call("save")
 	ctx.Set("font", "16px GameFont, monospace")

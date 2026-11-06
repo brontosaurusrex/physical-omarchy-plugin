@@ -18,6 +18,7 @@ ShellRoot {
     property int attempts: 0
     property var before: ({})
     property bool sent: false
+    property bool dispatching: false
     property var cases: []
     function find(item,name) {
         if(item.objectName===name) return item;
@@ -47,9 +48,12 @@ ShellRoot {
         {name:"Speed 100", run:()=>tap(Qt.Key_8), check:()=>game.state.gameSpeed===100 && game.state.ready},
         {name:"Ready brick flip", run:()=>tap(Qt.Key_Y), wait:()=>game.state.flipAnimating, check:()=>game.state.flipped && same("x") && same("y") && same("paddleX") && same("lives") && same("score") && game.state.ready},
         {name:"Ready brick restore", run:()=>tap(Qt.Key_Y), wait:()=>game.state.flipAnimating, check:()=>!game.state.flipped && same("x") && same("y") && game.state.ready},
+        {name:"Ready Zen", run:()=>tap(Qt.Key_H), check:()=>game.zenMode && game.state.zen && !find(game.contentView,"hud-controls").visible},
+        {name:"Ready Zen restore", run:()=>tap(Qt.Key_H), check:()=>!game.zenMode && find(game.contentView,"hud-controls").visible},
         {name:"Ready sound", run:()=>tap(Qt.Key_S), check:()=>changed("sound")},
         {name:"Ready debris", run:()=>tap(Qt.Key_R), check:()=>changed("debrisMaster")},
-        {name:"Enter start", run:()=>tap(Qt.Key_Return), check:()=>!game.state.ready && !game.state.paused, finish:()=>game.send({action:"pointer",x:game.gameView.gameWidth/2,y:game.gameView.gameHeight/2})},
+        {name:"Enter start", run:()=>tap(Qt.Key_Return), check:()=>!game.state.ready && !game.state.paused, finish:()=>input.mouseMove(game.gameView,game.gameView.width/2,game.gameView.height/2)},
+        {name:"Live Zen", run:()=>tap(Qt.Key_H), check:()=>game.zenMode && !find(game.contentView,"hud-controls").visible && same("paused") && same("lives") && same("score") && same("paddleX")},
         {name:"A paddle", run:()=>input.keyPress(Qt.Key_A), check:()=>game.state.paddleX < before.paddleX, finish:()=>input.keyRelease(Qt.Key_A)},
         {name:"D paddle", run:()=>input.keyPress(Qt.Key_D), check:()=>game.state.paddleX > before.paddleX, finish:()=>input.keyRelease(Qt.Key_D)},
         {name:"Left paddle", run:()=>input.keyPress(Qt.Key_Left), check:()=>game.state.paddleX < before.paddleX, finish:()=>input.keyRelease(Qt.Key_Left)},
@@ -67,6 +71,8 @@ ShellRoot {
         {name:"FPS", run:()=>tap(Qt.Key_F), check:()=>changed("fpsVisible") && !game.fullscreen},
         {name:"Lowest FPS", run:()=>tap(Qt.Key_F,Qt.ShiftModifier), check:()=>same("fpsVisible") && game.state.fpsLowest===0},
         {name:"Replay pause", run:()=>tap(Qt.Key_K), check:()=>game.state.replay && game.state.replayDirection===0},
+        {name:"Replay Zen", run:()=>{}, check:()=>game.zenMode && !find(game.contentView,"hud-controls").visible},
+        {name:"Replay Zen restore", run:()=>tap(Qt.Key_H), check:()=>!game.zenMode && game.state.replay && find(game.contentView,"hud-controls").visible},
         {name:"Replay toolbar play",run:()=>click("playback-toggle"),check:()=>game.state.replayDirection===1},
         {name:"Replay toolbar pause",run:()=>click("playback-toggle"),check:()=>game.state.replayDirection===0},
         {name:"Replay home", run:()=>tap(Qt.Key_Home), check:()=>game.state.replayFrame===0},
@@ -101,6 +107,8 @@ ShellRoot {
         {name:"Page down", run:()=>tap(Qt.Key_PageDown), check:()=>game.state.level===2},
         {name:"Page up", run:()=>tap(Qt.Key_PageUp), check:()=>game.state.level===1},
         {name:"Controls menu", run:()=>tap(Qt.Key_Question), check:()=>game.menuVisible && find(game.contentView,"controls-table").visible},
+        {name:"Menu Zen button", run:()=>click("toggle-zen"), check:()=>game.zenMode && game.menuVisible && !find(game.contentView,"hud-controls").visible},
+        {name:"Menu Zen shortcut", run:()=>tap(Qt.Key_H), check:()=>!game.zenMode && game.menuVisible && find(game.contentView,"hud-controls").visible},
         {name:"Menu sound", run:()=>game.send({action:"toggle-sound"}), check:()=>changed("sound")},
         {name:"Menu Escape", run:()=>tap(Qt.Key_Escape), check:()=>!game.opened, finish:()=>game.open("{}")},
         {name:"Reopened Space", run:()=>tap(Qt.Key_Space), check:()=>!game.state.ready && !game.state.paused},
@@ -110,16 +118,22 @@ ShellRoot {
     ]; }
     Component.onCompleted: { buildCases(); game.open("{}"); }
     Timer { interval: 250; repeat: true; running: true; onTriggered: {
-        if(game.errorText || game.renderError || ++root.attempts>160) { console.error("KEYBOARD FAILED",root.step,game.errorText,game.renderError); Qt.exit(1); return; }
+        // QtTest can process nested event loops while delivering input. Do not
+        // let this repeating timer run a shortcut twice during that delivery.
+        if (root.dispatching) return;
+        root.dispatching = true;
+        try {
+        if(game.errorText || game.renderError || ++root.attempts>190) { console.error("KEYBOARD FAILED",root.step,game.errorText,game.renderError); Qt.exit(1); return; }
         if(!game.engineReady || game.paintedFrames<2) return;
         if(root.step>=root.cases.length) { console.log("KEYBOARD PASS:",root.cases.length,"keyboard checks through Qt input"); Qt.exit(0); return; }
         var test=root.cases[root.step];
-        if(!root.sent) { root.before=JSON.parse(JSON.stringify(game.state)); test.run(); root.sent=true; return; }
+        if(!root.sent) { root.before=JSON.parse(JSON.stringify(game.state)); root.sent=true; test.run(); return; }
         if(test.wait && test.wait()) return;
         if(!test.check()) { console.error("KEYBOARD FAILED",test.name,JSON.stringify(game.state)); Qt.exit(1); return; }
         if(test.finish) test.finish();
         console.log("KEYBOARD OK",test.name);
         root.step++; root.sent=false;
+        } finally { root.dispatching = false; }
     } }
 }
 '''
@@ -130,6 +144,26 @@ with tempfile.TemporaryDirectory(prefix="physical-qml-test-") as directory:
         shutil.copytree(shell_dir / name, folder / name)
     shutil.copytree(project, folder / "Port", ignore=shutil.ignore_patterns(".git", "__pycache__", "dist"))
     (folder / "Port/native/qmldir").write_text("plugin physicalrenderer " + str(folder / "Port/native") + "\n")
+    # Keep shortcut assertions independent of balls falling out during the
+    # extra GUI checks. Only the temporary engine receives this safe level.
+    (folder / "Port/engine/levels/level1.txt").write_text("""gravity=0
+airDrag=0
+stuckSpeedThreshold=0
+ballRescueEnabled=false
+ballX=900
+ballY=450
+ballVx=60
+ballVy=0
+brickWidth=100
+brickHeight=40
+brickOffsetTop=50
+title="KEYBOARD TEST"
+---
+##########
+""")
+    subprocess.run(["go", "build", "-buildvcs=false", "-o", str(folder / "Port/bin/physical-engine"), "."],
+                   cwd=folder / "Port/engine", env=dict(os.environ, GOCACHE=os.environ.get("GOCACHE", "/tmp/physical-go-cache")),
+                   check=True, timeout=60)
     (folder / "shell.qml").write_text(harness)
     runtime = folder / "runtime"
     runtime.mkdir(mode=0o700)

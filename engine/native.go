@@ -34,6 +34,7 @@ type nativeCommand struct {
 }
 
 var nativeVolume = 0.25
+var nativeZen bool
 
 const nativeVolumeKey = "physical.audioVolume"
 
@@ -150,6 +151,8 @@ func nativeTuner() []map[string]any {
 }
 func handleNativeCommand(c nativeCommand) {
 	switch c.Action {
+	case "toggle-zen":
+		nativeZen = !nativeZen
 	case "hello":
 		nativeTunerDirty = true
 		nativeLastRoom = ""
@@ -304,7 +307,7 @@ func emitNativeFrame(encoder *json.Encoder, action string, timing ...*nativeFram
 	}
 	packet := map[string]any{
 		"type": "frame", "action": action, "ops": ops, "caches": caches, "width": canvasWidth, "height": canvasHeight,
-		"state": map[string]any{"level": currentLevelIndex + 1, "levels": len(levels), "lives": lives, "score": score, "paused": paused, "ready": waitingForStart, "gameOver": gameOver, "win": win, "complete": levelAdvancePending, "balls": activeBallCount(), "remaining": remaining, "auto": autoPaddleEnabled, "gameSpeed": gameSpeedPercent, "runSpeed": levelRunStats.speedPercent, "mixedSpeed": levelRunStats.mixedSpeed, "levelTime": levelRunStats.elapsedSeconds, "recordEligible": levelRunRecordEligible, "flipped": bricksVerticalFlipped, "flipAnimating": brickFlipAnimation.active, "flipPhase": currentBrickWipePhase(), "flipReverse": brickFlipAnimation.reverse, "flipPowerActive": magicBrickFlipActive, "flipTimer": magicBrickFlipTimer, "sound": enableSounds, "volume": nativeVolume, "palette": palette, "fps": fpsCurrent, "replay": replayModeActive, "replayFrames": len(replayFrames), "replayFrame": replayFrameIndex, "replayDirection": replayPlaybackDirection, "replaySpeed": replayPlaybackSpeed, "editor": physicsEditorVisible, "live": physicsEditorLiveSimulation, "debris": debrisEnabled, "debrisMaster": debrisMasterEnabled, "debrisPieces": len(brickDebris), "corner": physicsConfig.cornerPhysicsEnabled, "allCorners": physicsConfig.cornerPhysicsAllBricks, "x": ball.x, "y": ball.y, "omega": ball.omega, "physicsSteps": physicsLastFrameSteps, "paddleX": paddle.x, "status": nativeStatus(), "magnet": magnetIsActive(), "zapper": zapperIsActive(), "fpsVisible": fpsMiniOverlayVisible, "fpsLowest": fpsLowest, "diagnostics": []bool{physicsOverlayVisible, debugOverlayVisible, statsOverlayVisible}, "unlocked": devAllLevelsUnlocked},
+		"state": map[string]any{"zen": nativeZen, "level": currentLevelIndex + 1, "levels": len(levels), "lives": lives, "score": score, "paused": paused, "ready": waitingForStart, "gameOver": gameOver, "win": win, "complete": levelAdvancePending, "balls": activeBallCount(), "remaining": remaining, "auto": autoPaddleEnabled, "gameSpeed": gameSpeedPercent, "runSpeed": levelRunStats.speedPercent, "mixedSpeed": levelRunStats.mixedSpeed, "levelTime": levelRunStats.elapsedSeconds, "recordEligible": levelRunRecordEligible, "flipped": bricksVerticalFlipped, "flipAnimating": brickFlipAnimation.active, "flipPhase": currentBrickWipePhase(), "flipReverse": brickFlipAnimation.reverse, "flipPowerActive": magicBrickFlipActive, "flipTimer": magicBrickFlipTimer, "sound": enableSounds, "volume": nativeVolume, "palette": palette, "fps": fpsCurrent, "replay": replayModeActive, "replayFrames": len(replayFrames), "replayFrame": replayFrameIndex, "replayDirection": replayPlaybackDirection, "replaySpeed": replayPlaybackSpeed, "editor": physicsEditorVisible, "live": physicsEditorLiveSimulation, "debris": debrisEnabled, "debrisMaster": debrisMasterEnabled, "debrisPieces": len(brickDebris), "corner": physicsConfig.cornerPhysicsEnabled, "allCorners": physicsConfig.cornerPhysicsAllBricks, "x": ball.x, "y": ball.y, "omega": ball.omega, "physicsSteps": physicsLastFrameSteps, "paddleX": paddle.x, "status": nativeStatus(), "magnet": magnetIsActive(), "zapper": zapperIsActive(), "fpsVisible": fpsMiniOverlayVisible, "fpsLowest": fpsLowest, "diagnostics": []bool{physicsOverlayVisible, debugOverlayVisible, statsOverlayVisible}, "unlocked": devAllLevelsUnlocked},
 	}
 	if shapes := js.DebrisShapes(); len(shapes) > 0 {
 		packet["debrisShapes"] = shapes

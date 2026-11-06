@@ -2,7 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
-import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 import "theme" as Theme
 
@@ -23,7 +23,7 @@ GameCore {
     prepareWindow: function() { if (!windowSetup.running) windowSetup.running = true; }
     onDismissed: if (shell && typeof shell.hide === "function") shell.hide("b.physical")
     onClipboardRequested: function(text) { Quickshell.clipboardText = text; }
-    Component.onCompleted: { Theme.Color.source = Color; Theme.Style.source = Style; }
+    Component.onCompleted: { Theme.Color.source = Commons.Color; Theme.Style.source = Commons.Style; }
     Process {
         id: windowSetup
         command: [root.windowPath, String(root.defaultWindowWidth), String(root.defaultWindowHeight)]
@@ -63,8 +63,8 @@ GameCore {
             id: frame
             anchors.fill: parent
             color: panel.color
-            borderSpec: panel.fullscreen ? Border.none() : Border.surfaceSpec("menu", "border", Color.menu.border, Math.max(1, Style.normalBorderWidth))
-            radius: panel.fullscreen ? 0 : Style.cornerRadius
+            borderSpec: panel.fullscreen ? Commons.Border.none() : Commons.Border.surfaceSpec("menu", "border", Commons.Color.menu.border, Math.max(1, Commons.Style.normalBorderWidth))
+            radius: panel.fullscreen ? 0 : Commons.Style.cornerRadius
         }
     }
 }

@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls as QQC
 import QtQuick.Layouts
-import "theme"
+import "theme" as Theme
 
 Rectangle {
     id: root
@@ -9,25 +9,25 @@ Rectangle {
     required property var sliders
     signal command(var data)
     signal dismissed()
-    color: Color.menu.background
-    border.color: Color.menu.border
+    color: Theme.Color.menu.background
+    border.color: Theme.Color.menu.border
     border.width: 1
-    radius: Style.cornerRadius
+    radius: Theme.Style.cornerRadius
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: Style.space(16)
-        spacing: Style.space(10)
+        anchors.margins: Theme.Style.space(16)
+        spacing: Theme.Style.space(10)
         RowLayout {
             Layout.fillWidth: true
-            Text { text: "PHYSICS LAB"; color: Color.accent; font.family: Style.fontFamily; font.pixelSize: Style.font.heading; Layout.fillWidth: true; }
+            Text { text: "PHYSICS LAB"; color: Theme.Color.accent; font.family: Theme.Style.fontFamily; font.pixelSize: Theme.Style.font.heading; Layout.fillWidth: true; }
             GameButton { text: "Close"; onClicked: root.dismissed(); }
         }
-        Text { text: "Changes mark this run as assisted."; color: Color.muted; font.family: Style.fontFamily; font.pixelSize: Style.font.body; }
+        Text { text: "Changes mark this run as assisted."; color: Theme.Color.muted; font.family: Theme.Style.fontFamily; font.pixelSize: Theme.Style.font.body; }
         Flow {
             Layout.fillWidth: true
             Layout.preferredHeight: childrenRect.height
-            spacing: Style.space(8)
+            spacing: Theme.Style.space(8)
             GameButton { text: root.state.live ? "Live" : "Frozen"; selected: root.state.live === true; onClicked: root.command({ action: "setting", group: "toggle", key: "live", down: !root.state.live }); }
             GameButton { text: "Debris"; selected: root.state.debris === true; onClicked: root.command({ action: "setting", group: "toggle", key: "debris", down: !root.state.debris }); }
             GameButton { text: "Corners"; selected: root.state.corner === true; onClicked: root.command({ action: "setting", group: "toggle", key: "corner", down: !root.state.corner }); }
@@ -42,7 +42,7 @@ Rectangle {
             contentWidth: availableWidth
             Column {
                 width: parent.width
-                spacing: Style.space(10)
+                spacing: Theme.Style.space(10)
                 Repeater {
                     model: root.sliders
                     delegate: Column {
@@ -50,25 +50,25 @@ Rectangle {
                         required property var modelData
                         required property int index
                         width: parent.width
-                        spacing: Style.space(4)
+                        spacing: Theme.Style.space(4)
                         Text {
                             visible: row.index === 0 || root.sliders[row.index - 1].group !== row.modelData.group
-                            height: visible ? implicitHeight + Style.space(8) : 0
+                            height: visible ? implicitHeight + Theme.Style.space(8) : 0
                             text: row.modelData.group
-                            color: Color.accent
-                            font.family: Style.fontFamily
-                            font.pixelSize: Style.font.subtitle
+                            color: Theme.Color.accent
+                            font.family: Theme.Style.fontFamily
+                            font.pixelSize: Theme.Style.font.subtitle
                         }
                         Row {
                             width: parent.width
-                            Text { width: parent.width * 0.7; text: row.modelData.label; color: Color.foreground; font.family: Style.fontFamily; font.pixelSize: Style.font.body; }
-                            Text { width: parent.width * 0.3; horizontalAlignment: Text.AlignRight; text: Number(slider.value).toFixed(row.modelData.precision); color: Color.muted; font.family: Style.fontFamily; font.pixelSize: Style.font.body; }
+                            Text { width: parent.width * 0.7; text: row.modelData.label; color: Theme.Color.foreground; font.family: Theme.Style.fontFamily; font.pixelSize: Theme.Style.font.body; }
+                            Text { width: parent.width * 0.3; horizontalAlignment: Text.AlignRight; text: Number(slider.value).toFixed(row.modelData.precision); color: Theme.Color.muted; font.family: Theme.Style.fontFamily; font.pixelSize: Theme.Style.font.body; }
                         }
                         QQC.Slider {
                             id: slider
                             objectName: "physics-" + row.modelData.key
                             width: parent.width
-                            implicitHeight: Style.space(24)
+                            implicitHeight: Theme.Style.space(24)
                             height: implicitHeight
                             from: row.modelData.min
                             to: row.modelData.max
@@ -80,14 +80,14 @@ Rectangle {
                                 y: slider.topPadding + slider.availableHeight / 2 - height / 2
                                 width: slider.availableWidth
                                 height: 3
-                                color: Color.muted
-                                Rectangle { width: slider.visualPosition * parent.width; height: parent.height; color: Color.accent; }
+                                color: Theme.Color.muted
+                                Rectangle { width: slider.visualPosition * parent.width; height: parent.height; color: Theme.Color.accent; }
                             }
                             handle: Rectangle {
                                 x: slider.leftPadding + slider.visualPosition * (slider.availableWidth - width)
                                 y: slider.topPadding + slider.availableHeight / 2 - height / 2
-                                width: Style.space(12); height: width; radius: width / 2
-                                color: slider.pressed ? Color.accent : Color.foreground
+                                width: Theme.Style.space(12); height: width; radius: width / 2
+                                color: slider.pressed ? Theme.Color.accent : Theme.Color.foreground
                             }
                         }
                     }
